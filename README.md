@@ -17,16 +17,16 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 14. CRUISE cortical reconstruction (right hemisphere)
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-# Installation instructions
+## Installation instructions
 Things needed to be installed and added to PATH:
 1. MATLAB scripts added to path
 2. SPM installation
 3. ANTs installation (probably can be done with Python entirely using ANTsPy)
 
-# Instructions for use
+## Instructions for use
 Data should be formated according to BIDS. Change paths and subject name to run.
 
-# Things to do
+## Things to do
 1. Get rid of shell scripts and call directly from Python
 2. Make use of ANTsPy (instead of ANTs)
 3. Give file dor mapping onto surface

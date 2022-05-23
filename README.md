@@ -19,9 +19,9 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 
 # Installation instructions
 Things needed to be installed and added to PATH:
-1. MATLAB scripts (not included in the repository yet)
-2. ANTs installation (probably can be done with Python entirely using ANTsPy)
-3. SPM installation
+1. MATLAB scripts added to path
+2. SPM installation
+3. ANTs installation (probably can be done with Python entirely using ANTsPy)
 
 # Instructions for use
 Data should be formated according to BIDS. Change paths and subject name to run.

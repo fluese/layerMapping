@@ -1,5 +1,5 @@
 # Introduction
-This is a pipeline processing MP2RAGE data by performing the following steps:
+This is a pipeline processing MP2RAGE data to map information on a surface by performing the following steps:
 
 01. Setup
 02. MP2RAGE background cleaning

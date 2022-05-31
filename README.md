@@ -28,10 +28,3 @@ Data should be formated according to BIDS. Change paths and subject name to run.
 
 ## Things to do
 1. Make use of ANTsPy (instead of ANTs)
-2. Give file dor mapping onto surface
-3. For cleaner code, put pipelines into different files and call these
-  3.1. Whole brain and partial high resolution slab data
-  3.2. Whole brain data
-  3.3. Make an entry point before the segmentation (like in recon-all)
-  3.4. Make a hires pipeline for sensemap-like data
-  3.5. Make a standard pipeline

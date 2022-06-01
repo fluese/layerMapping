@@ -19,12 +19,19 @@ This is a pipeline processing MP2RAGE data to map information on a surface by pe
 
 ## Installation instructions
 Things needed to be installed and added to PATH:
-1. MATLAB scripts added to path
+1. MATLAB scripts added to path (weightedAverage and biasCorrection)
 2. SPM installation
 3. ANTs installation (probably can be done with Python entirely using ANTsPy)
 
+You need to change the path to the tissue probability model for the bias
+field correction method. This needs to be done in
+ 
+./biasCorrection/preproc_sensemap.m on line 19
+
 ## Instructions for use
-Data should be formated according to BIDS. Change paths and subject name to run.
+1. Data needs be formated according to BIDS.
+2. Paths, files, and flags need to be changed at the beginning of the Python script
 
 ## Things to do
 1. Make use of ANTsPy (instead of ANTs)
+2. Get rid of MATLAB dependencies

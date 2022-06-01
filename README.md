@@ -27,9 +27,10 @@ You need to change the path to the tissue probability model for the bias
 field correction method. This needs to be done in
 ./biasCorrection/preproc_sensemap.m on line 19
 
-## Brief instructions for use (for detailed description cf. surfaceMapping_hiresSlab.py)
-1. Data needs be formated according to BIDS
-2. Paths, files, and flags need to be changed at the beginning of the Python script
+## Brief instructions for use
+1. For detailed description cf. surfaceMapping_hiresSlab.py
+2. Data needs be formated according to BIDS
+3. Paths, files, and flags need to be changed at the beginning of the Python script
 
 ## Things to do
 1. Make use of ANTsPy (instead of ANTs)

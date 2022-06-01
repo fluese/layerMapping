@@ -28,8 +28,8 @@ field correction method. This needs to be done in
  
 ./biasCorrection/preproc_sensemap.m on line 19
 
-## Instructions for use
-1. Data needs be formated according to BIDS.
+## Brief instructions for use (for detailed description cf. surfaceMapping_hiresSlab.py)
+1. Data needs be formated according to BIDS
 2. Paths, files, and flags need to be changed at the beginning of the Python script
 
 ## Things to do

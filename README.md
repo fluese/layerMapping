@@ -25,7 +25,6 @@ Things needed to be installed and added to PATH:
 
 You need to change the path to the tissue probability model for the bias
 field correction method. This needs to be done in
- 
 ./biasCorrection/preproc_sensemap.m on line 19
 
 ## Brief instructions for use (for detailed description cf. surfaceMapping_hiresSlab.py)

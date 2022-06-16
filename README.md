@@ -42,4 +42,4 @@ You need to change the path to the tissue probability model for the bias field c
 
 ## Contact information
 Dr. Falk Luesebrink
-falk dot luesebrink at ovgu dot de
+(falk dot luesebrink at ovgu dot de)

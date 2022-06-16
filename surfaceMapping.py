@@ -158,9 +158,6 @@ reprocess_rightHemisphere = False
 # Flag to reprocess additional data
 reprocess_map_data = False
 
-# Flag for the number of threads for the registration with ANTs
-CPUs = str(24)
-
 # Define path to atlas (probably not needed in newer versions as it should be the default one)
 atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
 

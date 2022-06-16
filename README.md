@@ -18,20 +18,19 @@ This is a pipeline processing MP2RAGE data to map information on a surface by pe
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
 ## Installation instructions
-Things needed to be installed and added to PATH:
-1. MATLAB scripts added to path (weightedAverage and biasCorrection)
-2. SPM installation
-3. ANTs installation (probably can be done with Python entirely using ANTsPy)
+Things needed to be installed:
+1. Working MATLAB installation
+2. Working SPM installation
+3. MATLAB scripts (weightedAverage and biasCorrection) added to Path
 
-You need to change the path to the tissue probability model for the bias
-field correction method. This needs to be done in
+You need to change the path to the tissue probability model for the bias field correction method. This needs to be done in
 ./biasCorrection/preproc_sensemap.m on line 19
 
 ## Brief instructions for use
-1. For detailed description cf. surfaceMapping_hiresSlab.py
+1. For detailed description cf. surfaceMapping.py
 2. Data needs be formated according to BIDS
-3. Paths, files, and flags need to be changed at the beginning of the Python script
+3. Paths, files, and flags need to be changed at the beginning of the Python script in the "set parameters" section
 
 ## Things to do
-1. Make use of ANTsPy (instead of ANTs)
-2. Get rid of MATLAB dependencies
+1. Get rid of MATLAB dependencies
+2. Specify files, paths, and flag from outside this script

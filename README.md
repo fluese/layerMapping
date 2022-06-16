@@ -34,3 +34,5 @@ You need to change the path to the tissue probability model for the bias field c
 ## Things to do
 1. Get rid of MATLAB dependencies
 2. Specify files, paths, and flag from outside this script
+3. Apply transformation to multiple volumes instead of a single file
+4. Differentiate between data type to be mapped on the surface, e.g. QSM, fMRI, other types.

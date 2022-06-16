@@ -3,10 +3,10 @@ This is a pipeline processing MP2RAGE data to map information on a surface by pe
 
 01. Setup
 02. MP2RAGE background cleaning
-03. Resampling to 500 µm
+03. Resampling to 500 µm (only for hires option)
 04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data
-06. Weighted images combination of full brain and slab data
+05. Registration of whole brain to slab data (only for hires option)
+06. Weighted images combination of full brain and slab data (only for hires option)
 07. Atlas-guided tissue classification using MGDM
 08. Region extraction (left hemisphere) 
 09. Crop volume (left hemisphere)

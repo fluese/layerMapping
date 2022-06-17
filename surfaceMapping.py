@@ -431,12 +431,28 @@ else:
 if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
-	print('* Register additional data to (upsampled) 700 µm MP2RAGE data')
+	print('* Register additional data to (upsampled) MP2RAGE data')
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, + tmp1 + 'Warped.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, tmp1 + 'Warped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
-		os.system('antsRegistrationSyN_sensemapMI.sh -d 3 -n ' + CPUs + ' -f ' + T1map_biasCorrected + ' -m ' + map_data + ' -o ' + out_dir + tmp1 + ' -t sr')		
+		registeredImage = ants.registration(
+				fixed = ants.image_read(T1map_biasCorrected),
+				moving = ants.image_read(map_data),
+				type_of_transform = 'SyNRA',
+				reg_iterations = (200, 100, 20 ,10),
+				verbose = True,
+				)
+
+		warpedImage = ants.apply_transforms(
+				fixed = ants.image_read(T1map_biasCorrected),
+				moving = ants.image_read(map_data),
+		                transformlist = registeredImage['fwdtransforms'],
+				interpolator = 'bSpline',
+				verbose = True,
+				)
+
+		ants.image_write(warpedImage, out_dir + tmp1 + 'Warped.nii.gz') 
 
 # Update file name
 map_data = os.path.join(out_dir, tmp1 + 'Warped.nii.gz')

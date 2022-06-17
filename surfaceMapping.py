@@ -35,11 +35,13 @@ Version 0.9 (17.06.2022)
 ############################################################################
 # THINGS TO DO
 # -------------------
-# Specify files, paths, and flag from outside this script
-# Get rid of MATLAB:
+# 1. Specify files, paths, and flag from outside this script
+# 2. Get rid of MATLAB:
 # 	Switch from SPM's bias correction method to N4 of ANTs for easier use
 # 	Re-write the weightedAverage script for Python
 #	MP2RAGE background cleaning
+# 3. Apply transformation to multiple volumes instead of a single file
+# 4. Differentiate between data type to be mapped on the surface automatically, e.g. QSM, fMRI, other types.
 #
 
 ############################################################################
@@ -101,21 +103,21 @@ from nibabel.processing import conform
 ############################################################################
 # 1.2. Set parameters
 # -------------------
+# Define BIDS path
+BIDS_path = '/tmp/luesebrink/'
+
 # Define path from where data is to be copied into "BIDS_path". Could either
 # be to create a backup of the data before processing or transfer to a
 # compute server.
 # If the path does not exist, this option will be omitted and the data from
-# "BIDS_path" will be used.
+# "BIDS_path" will be used instead.
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/all/young/'
-
-# Define BIDS path
-BIDS_path = '/tmp/luesebrink/'
 
 # Define subject following BIDS
 sub = 'wtl'
 
 # Process with high resolution MP2RAGE slab?
-hires = False
+hires = True
 
 # Map specific file onto the surface. Requries full path to a NIfTI file.
 # If the path points to a non-existing file, the according option will
@@ -182,27 +184,33 @@ T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
 UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
 
 # Copy data
-if os.path.isdir(copy_data_from):
-	print('')
-	print('*****************************************************')
-	print('* Data transfer to working directory.')
-	print('*****************************************************')
-	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
-		print('Files exists already. Skipping data transfer.')
-	else:
-		os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
+#if os.path.isdir(copy_data_from):
+print('')
+print('*****************************************************')
+print('* Data transfer to working directory.')
+print('*****************************************************')
+if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
+	print('Files exists already. Skipping data transfer.')
+else:
+	os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
 
 # Check if data exists.
 print('')
 print('*****************************************************')
 print('* Checking if files exists.')
 print('*****************************************************')
-if os.path.isfile(INV1) and os.path.isfile(INV2) and os.path.isfile(T1map) and os.path.isfile(UNI)
+if os.path.isfile(INV1) and os.path.isfile(INV2) and os.path.isfile(T1map) and os.path.isfile(UNI):
 	print('Files exists. Good!')
+else:
+	print('No files found. Exiting!')
+	exit()
 
 if hires == True:
-	if os.path.isfile(INV1_slab) and os.path.isfile(INV2_slab) and os.path.isfile(T1map_slab) and os.path.isfile(UNI_slab)
-	print('High resolution files exists. Good!')
+	if os.path.isfile(INV1_slab) and os.path.isfile(INV2_slab) and os.path.isfile(T1map_slab) and os.path.isfile(UNI_slab):
+		print('High resolution files exists. Good!')
+	else:
+		print('No high resolution files found. Continuing without hires option!')
+		hires = False
 
 # Check if file for mapping of additional data exists.
 print('')
@@ -288,6 +296,7 @@ if hires == True:
 		input_img = nb.load(T1map)
 		resampled_img = conform(input_img, out_shape=(336,448,448), voxel_size=(0.5,0.5,0.5), order=4)
 		nb.save(resampled_img, os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled.nii.gz'))
+		print('Done.')
 
 	# Update file names
 	T1map = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled.nii.gz')
@@ -407,6 +416,7 @@ if hires == True:
 		print('*****************************************************')
 		print('* Apply transformations')
 		print('*****************************************************')
+		# Apply transformation to several files.
 		warpedImage = ants.apply_transforms(
 				fixed = ants.image_read(T1map_biasCorrected),
 				moving = ants.image_read(T1map_slab),
@@ -443,7 +453,7 @@ if hires == True:
 	T1map_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
 
 ############################################################################
-# 5.1. Register additional data to (upsampled) 700 µm data
+# 5.1. Register additional data to (upsampled) T1map
 # -------------------
 if reprocess_map_data:
 	reprocess = True
@@ -465,6 +475,7 @@ if map_file_onto_surface:
 	if os.path.isfile(os.path.join(out_dir, reg1 + 'Warped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
+		# Register additional data non-linearly to T1map using mutual information as similarity metric
 		registeredImage = ants.registration(
 				fixed = ants.image_read(T1map_biasCorrected),
 				moving = ants.image_read(map_data),
@@ -474,6 +485,7 @@ if map_file_onto_surface:
 				outprefix = out_dir + reg1,
 				)
 
+		# Apply transformation
 		warpedImage = ants.apply_transforms(
 				fixed = ants.image_read(T1map_biasCorrected),
 				moving = ants.image_read(map_data),
@@ -482,6 +494,7 @@ if map_file_onto_surface:
 				verbose = True,
 				)
 
+		# Write file to disk
 		ants.image_write(warpedImage, out_dir + reg1 + 'Warped.nii.gz') 
 
 # Update file name
@@ -495,7 +508,7 @@ if hires == True:
 else:
 	reg2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
 
-if map_transform_file_onto_surface:
+if map_file_onto_surface and map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Apply transformation of registration to additional data')
@@ -503,7 +516,17 @@ if map_transform_file_onto_surface:
 	if os.path.isfile(os.path.join(out_dir, reg2)) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
-		os.system('antsApplyTransforms -d 3 -e 0 -n BSpline[4] --float --verbose -i ' + transform_data + ' -r ' + T1w_biasCorrected + ' -o ' + out_dir + reg2 + ' -t ' + out_dir + reg1 + '1Warp.nii.gz -t ' + out_dir + reg1 + '0GenericAffine.mat')
+		# Apply transformation
+		warpedImage = ants.apply_transforms(
+				fixed = ants.image_read(T1map_biasCorrected),
+				moving = ants.image_read(transform_data),
+		                transformlist = registeredImage['fwdtransforms'],
+				interpolator = 'bSpline',
+				verbose = True,
+				)
+
+		# Write file to disk
+		ants.image_write(warpedImage, out_dir + reg2 + 'Warped.nii.gz') 
 		
 # Update file name
 transform_data = os.path.join(out_dir, reg2)
@@ -549,7 +572,9 @@ if hires == True:
 # Next, we use the masked data as input for tissue classification with the
 # MGDM algorithm. MGDM works with a single contrast, but can  be improved
 # with additional contrasts potentially. Here, we make use of the T1map 
-# only. [Note: Using the T1w contrast additionally yields very strange 
+# only.
+#
+# [Note: Using the T1w contrast additionally yields very strange 
 # segmentation results for some subjects and needs further investigation.]
 print('')
 print('*****************************************************')
@@ -618,27 +643,32 @@ if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_T1map_leftHe
 	background_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xproba-lcrbg_cropped.nii.gz'))
 	T1map_masked_leftHemisphere = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_T1map_leftHemisphere_cropped.nii.gz'))
 else:
+	# Load grey matter image, binarize image, and get information for cropping
 	img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
 	tmp = img.get_fdata()
 	tmp[tmp<0] = 0
 	tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
 	crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
+	# Apply cropping
 	tmp1 = nb.load(cortex['inside_mask'])
 	tmp2 = tmp1.get_fdata()
 	inside_mask = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
 	nb.save(inside_mask, os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrwm_cropped.nii.gz'))
 
+	# Apply cropping
 	tmp1 = nb.load(cortex['inside_proba'])
 	tmp2 = tmp1.get_fdata()
 	inside_proba = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
 	nb.save(inside_proba, os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xproba-lcrwm_cropped.nii.gz'))
 
+	# Apply cropping
 	tmp1 = nb.load(cortex['region_proba'])
 	tmp2 = tmp1.get_fdata()
 	region_proba = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
 	nb.save(region_proba, os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xproba-lcrgm_cropped.nii.gz'))
 
+	# Apply cropping
 	tmp1 = nb.load(cortex['background_proba'])
 	tmp2 = tmp1.get_fdata()
 	background_proba = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
@@ -670,13 +700,14 @@ if map_file_onto_surface:
 		print('File exists already. Skipping process.')
 		map_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_map_data_leftHemisphere_cropped.nii.gz')
 	else:
-
+		# Load grey matter image, binarize image, and get information for cropping
 		img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
 		tmp = img.get_fdata()
 		tmp[tmp<0] = 0
 		tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
 		crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
+		# Apply cropping
 		tmp1 = nb.load(map_data)
 		tmp2 = tmp1.get_fdata()
 		map_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
@@ -701,12 +732,14 @@ if map_transform_file_onto_surface:
 		print('File exists already. Skipping process.')
 		transform_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_transform_data_leftHemisphere_cropped.nii.gz')
 	else:
+		# Load grey matter image, binarize image, and get information for cropping
 		img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
 		tmp = img.get_fdata()
 		tmp[tmp<0] = 0
 		tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
 		crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
+		# Apply cropping
 		tmp1 = nb.load(transform_data)
 		tmp2 = tmp1.get_fdata()
 		transform_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)

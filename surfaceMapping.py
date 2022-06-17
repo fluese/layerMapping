@@ -20,7 +20,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 14. CRUISE cortical reconstruction (right hemisphere)
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.9 (16.06.2022)
+Version 0.9 (17.06.2022)
 '''
 
 ############################################################################
@@ -105,14 +105,14 @@ from nibabel.processing import conform
 # be to create a backup of the data before processing or transfer to a
 # compute server.
 # If the path does not exist, this option will be omitted and the data from
-# "BIDS_path" will be used. [Not included yet!!!]
+# "BIDS_path" will be used.
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/all/young/'
 
 # Define BIDS path
 BIDS_path = '/tmp/luesebrink/'
 
 # Define subject following BIDS
-sub = 'ben'
+sub = 'wtl'
 
 # Process with high resolution MP2RAGE slab?
 hires = False
@@ -170,36 +170,6 @@ out_dir = BIDS_path + 'derivatives/sub-' + sub + '/'
 os.system('mkdir -p ' + in_dir)
 os.system('mkdir -p ' + out_dir)
 
-# Copy data
-print('')
-print('*****************************************************')
-print('* Data transfer.')
-print('*****************************************************')
-if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
-	print('Files exists already. Skipping data transfer.')
-else:
-	os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
-
-# Check if file for mapping of additional data exists.
-print('')
-print('*****************************************************')
-print('* Checking for additional data to be mapped.')
-print('*****************************************************')
-if os.path.isfile(map_data):
-	map_file_onto_surface = True
-	print('File found for mapping of additional data onto surface found!')
-else:
-	map_file_onto_surface = False
-	print('Could not find file for surface mapping. Omitting flag!')
-
-# Check if file for applying the transformation of the additional data exists.
-if os.path.isfile(transform_data):
-	map_transform_file_onto_surface = True
-	print('File found to apply transform of additional data found!')
-else:
-	map_transform_file_onto_surface = False
-	print('Could not find file for applying transform of additional data. Omitting flag!')
-
 # Define file names
 INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
 INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
@@ -211,6 +181,50 @@ INV2_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_inv-2_MP2RAGE.nii.gz')
 T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
 UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
 
+# Copy data
+if os.path.isdir(copy_data_from):
+	print('')
+	print('*****************************************************')
+	print('* Data transfer to working directory.')
+	print('*****************************************************')
+	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
+		print('Files exists already. Skipping data transfer.')
+	else:
+		os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
+
+# Check if data exists.
+print('')
+print('*****************************************************')
+print('* Checking if files exists.')
+print('*****************************************************')
+if os.path.isfile(INV1) and os.path.isfile(INV2) and os.path.isfile(T1map) and os.path.isfile(UNI)
+	print('Files exists. Good!')
+
+if hires == True:
+	if os.path.isfile(INV1_slab) and os.path.isfile(INV2_slab) and os.path.isfile(T1map_slab) and os.path.isfile(UNI_slab)
+	print('High resolution files exists. Good!')
+
+# Check if file for mapping of additional data exists.
+print('')
+print('*****************************************************')
+print('* Checking for additional data to be mapped.')
+print('*****************************************************')
+if os.path.isfile(map_data):
+	map_file_onto_surface = True
+	print('File found for mapping of additional data onto surface!')
+else:
+	map_file_onto_surface = False
+	print('Could not find file for surface mapping. Omitting flag!')
+
+# Check if file for applying the transformation of the additional data exists.
+if os.path.isfile(transform_data):
+	map_transform_file_onto_surface = True
+	print('File found for applying transform of additional data!')
+else:
+	map_transform_file_onto_surface = False
+	print('Could not find file for applying transform of additional data. Omitting flag!')
+
+# Set flag if high resolution slab is used.
 if hires == True:
 	filename = '_merged_run-01+02'
 else:
@@ -332,16 +346,27 @@ if hires == True:
 	T1map_slab_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_masked.nii.gz')
 else:
 	# Mask uncorrected T1map if it does not exist already
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz')) and reprocess != True:
-		maskedImage = ants.mask_image(ants.image_read(T1map), ants.image_read(mask))
-		ants.image_write(maskedImage, out_dir + 'sub-' + sub + '_run-01_T1map_masked.nii.gz')
-
-	# Update file names
-	mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_brainmask.nii.gz')
+	print('')
+	print('*****************************************************')
+	print('* Masking T1map')
+	print('*****************************************************')
+	# Update file names	
 	T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_biasCorrected.nii.gz')
 	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_biasCorrected_masked.nii.gz')
 	T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_biasCorrected.nii.gz')
 	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_biasCorrected_masked.nii.gz')
+	mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_brainmask.nii.gz')
+	
+	# Check if volume exists
+	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz')) and reprocess != True:
+		print('File exists already. Skipping process.')
+	else:
+	# Mask image otherwise
+		maskedImage = ants.mask_image(ants.image_read(T1map), ants.image_read(mask))
+		ants.image_write(maskedImage, os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz'))
+		print('Done.')
+
+	# Update file names
 	T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz')
 
 ############################################################################
@@ -622,12 +647,13 @@ else:
 	tmp1 = nb.load(T1map_masked)
 	tmp2 = tmp1.get_fdata()
 	T1map_masked_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
-	nb.save(T1map_masked_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + filename + 'T1map_leftHemisphere_cropped.nii.gz'))
+	nb.save(T1map_masked_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + filename + '_T1map_leftHemisphere_cropped.nii.gz'))
 
 	del img
 	del tmp
 	del tmp1
 	del tmp2
+	print('Done.')
 
 ############################################################################
 # 9.1. Crop additional data to left hemispehre
@@ -660,6 +686,7 @@ if map_file_onto_surface:
 		del tmp
 		del tmp1
 		del tmp2
+		print('Done.')
 
 ############################################################################
 # 9.2. Crop additionally transformed data to left hemispehre
@@ -689,6 +716,7 @@ if map_transform_file_onto_surface:
 		del tmp
 		del tmp1
 		del tmp2
+		print('Done.')
 
 if reprocess_map_data:
 	reprocess = False
@@ -1141,6 +1169,7 @@ else:
 	del tmp
 	del tmp1
 	del tmp2
+	print('Done.')
 
 ############################################################################
 # 13.1. Crop additional data to right hemispehre
@@ -1172,6 +1201,7 @@ if map_file_onto_surface:
 		del tmp
 		del tmp1
 		del tmp2
+		print('Done.')
 
 ############################################################################
 # 13.2. Crop additionally transformed data to left hemispehre
@@ -1200,6 +1230,7 @@ if map_transform_file_onto_surface:
 		del tmp
 		del tmp1
 		del tmp2
+		print('Done.')
 
 if reprocess_map_data:
 	reprocess = False
@@ -1556,3 +1587,8 @@ if map_transform_file_onto_surface:
 # additional data should be done only.
 if reprocess_rightHemisphere or reprocess_map_data:
 	reprocess = False
+
+print('')
+print('*****************************************************')
+print('* Processing finished successfully.')
+print('*****************************************************')

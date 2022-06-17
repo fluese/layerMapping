@@ -184,15 +184,15 @@ T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
 UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
 
 # Copy data
-#if os.path.isdir(copy_data_from):
-print('')
-print('*****************************************************')
-print('* Data transfer to working directory.')
-print('*****************************************************')
-if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
-	print('Files exists already. Skipping data transfer.')
-else:
-	os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
+if os.path.isdir(copy_data_from):
+	print('')
+	print('*****************************************************')
+	print('* Data transfer to working directory.')
+	print('*****************************************************')
+	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
+		print('Files exists already. Skipping data transfer.')
+	else:
+		os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
 
 # Check if data exists.
 print('')

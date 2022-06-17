@@ -424,16 +424,20 @@ if reprocess_map_data:
 	reprocess = True
 
 if hires == True:
-	tmp1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_'
-else:
-	tmp1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected_'
-
-if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
-	print('* Register additional data to (upsampled) MP2RAGE data')
+	print('* Register additional data to upsampled T1map')
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, tmp1 + 'Warped.nii.gz')) and reprocess != True:
+	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_'
+else:
+	print('')
+	print('*****************************************************')
+	print('* Register additional data to T1map')
+	print('*****************************************************')
+	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected_'
+
+if map_file_onto_surface:
+	if os.path.isfile(os.path.join(out_dir, reg1 + 'Warped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 		registeredImage = ants.registration(
@@ -442,6 +446,7 @@ if map_file_onto_surface:
 				type_of_transform = 'SyNRA',
 				reg_iterations = (200, 100, 20 ,10),
 				verbose = True,
+				outprefix = out_dir + reg1,
 				)
 
 		warpedImage = ants.apply_transforms(
@@ -452,31 +457,31 @@ if map_file_onto_surface:
 				verbose = True,
 				)
 
-		ants.image_write(warpedImage, out_dir + tmp1 + 'Warped.nii.gz') 
+		ants.image_write(warpedImage, out_dir + reg1 + 'Warped.nii.gz') 
 
 # Update file name
-map_data = os.path.join(out_dir, tmp1 + 'Warped.nii.gz')
+map_data = os.path.join(out_dir, reg1 + 'Warped.nii.gz')
 
 ############################################################################
 # 5.2. Apply transformation to data to be mapped on the surface
 # -------------------
 if hires == True:
-	tmp2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
+	reg2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
 else:
-	tmp2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
+	reg2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
 
 if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Apply transformation of registration to additional data')
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, tmp2)) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, reg2)) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
-		os.system('antsApplyTransforms -d 3 -e 0 -n BSpline[4] --float --verbose -i ' + transform_data + ' -r ' + T1w_biasCorrected + ' -o ' + out_dir + tmp2 + ' -t ' + out_dir + tmp1 + '1Warp.nii.gz -t ' + out_dir + tmp1 + '0GenericAffine.mat')
+		os.system('antsApplyTransforms -d 3 -e 0 -n BSpline[4] --float --verbose -i ' + transform_data + ' -r ' + T1w_biasCorrected + ' -o ' + out_dir + reg2 + ' -t ' + out_dir + reg1 + '1Warp.nii.gz -t ' + out_dir + reg1 + '0GenericAffine.mat')
 		
 # Update file name
-transform_data = os.path.join(out_dir, tmp2)
+transform_data = os.path.join(out_dir, reg2)
 
 if reprocess_map_data:
 	reprocess = False

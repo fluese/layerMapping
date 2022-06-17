@@ -6,10 +6,10 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 
 01. Setup
 02. MP2RAGE background cleaning
-03. Resampling to 500 µm
+03. Resampling to 500 µm (only for hires option)
 04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data
-06. Weighted images combination of full brain and slab data
+05. Registration of whole brain to slab data (only for hires option)
+06. Weighted images combination of whole brain and slab data (only for hires option)
 07. Atlas-guided tissue classification using MGDM
 08. Region extraction (left hemisphere) 
 09. Crop volume (left hemisphere)
@@ -115,13 +115,13 @@ BIDS_path = '/tmp/luesebrink/'
 sub = 'ben'
 
 # Process with high resolution MP2RAGE slab?
-hires = True
+hires = False
 
 # Map specific file onto the surface. Requries full path to a NIfTI file.
 # If the path points to a non-existing file, the according option will
 # be omitted.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-map_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-0111_T1map.nii.gz'
+map_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-01_T1map.nii.gz'
 # map_data_output = ''
 
 # Transform data in the same space as 'map_data' which is then mapped onto
@@ -132,7 +132,7 @@ map_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-0111_T1map.nii.gz'
 # containing NIfTI files. The transformation is then applied to all 
 # files within the directory.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-transform_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-0111_T1map.nii.gz'
+transform_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-01_T1map.nii.gz'
 # transform_data_output = ''
 
 #
@@ -247,7 +247,6 @@ if hires == True:
 		output = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
 		os.system('matlab -nosplash -nodisplay -r \"removeBackgroundnoise(\'' + UNI_slab + '\', \'' + INV1_slab + '\', \'' + INV2_slab + '\', \'' + output + '\', ' + reg + '); exit;\"')
 
-
 # Update file names
 T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')
 T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
@@ -279,6 +278,10 @@ if hires == True:
 	# Update file names
 	T1map = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled.nii.gz')
 	T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_resampled.nii.gz')
+else:
+	# Copy and update file name
+	os.system('cp ' + T1map + ' ' + out_dir + 'sub-' + sub + '_run-01_T1map.nii.gz')
+	T1map = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
 
 ############################################################################
 # 4. Inhomogeneity correction and skull stripping
@@ -291,18 +294,16 @@ print('*****************************************************')
 print('* Inhomogeneity correction and skull stripping of whole brain data')
 print('*****************************************************')
 
-if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')) and reprocess != True:
+if hires == True:
+	checkFile = 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz'
+else:
+	checkFile = 'sub-' + sub + '_run-01_T1map_biasCorrected_masked.nii.gz'
+
+if os.path.isfile(os.path.join(out_dir, checkFile)) and reprocess != True:
 	print('File exists already. Skipping process.')
 else:
 	os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1w + '\'); exit;\"')
 	os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1map + '\'); exit;\"')
-
-# Update file names
-mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_brainmask.nii.gz')
-T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_resampled_biasCorrected.nii.gz')
-T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')
-T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
-T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
 
 if hires == True:
 	print('')
@@ -320,9 +321,28 @@ if hires == True:
 		os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1map_slab + '\'); exit;\"')
 
 	# Update file names
+	mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_brainmask.nii.gz')
+	T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_resampled_biasCorrected.nii.gz')
+	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')
+	T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
+	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
+
 	T1map_slab_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected.nii.gz')
 	T1w_slab_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected.nii.gz')
 	T1map_slab_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_masked.nii.gz')
+else:
+	# Mask uncorrected T1map if it does not exist already
+	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz')) and reprocess != True:
+		maskedImage = ants.mask_image(ants.image_read(T1map), ants.image_read(mask))
+		ants.image_write(maskedImage, out_dir + 'sub-' + sub + '_run-01_T1map_masked.nii.gz')
+
+	# Update file names
+	mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_brainmask.nii.gz')
+	T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_biasCorrected.nii.gz')
+	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_biasCorrected_masked.nii.gz')
+	T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_biasCorrected.nii.gz')
+	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_biasCorrected_masked.nii.gz')
+	T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_masked.nii.gz')
 
 ############################################################################
 # 5. Register data to upsampled 500 µm data
@@ -403,31 +423,44 @@ if hires == True:
 if reprocess_map_data:
 	reprocess = True
 
+if hires == True:
+	tmp1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_'
+else:
+	tmp1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected_'
+
 if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Register additional data to (upsampled) 700 µm MP2RAGE data')
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_Warped.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, + tmp1 + 'Warped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
-		map_data = os.path.join(out_dir, 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_Warped.nii.gz')
 	else:
-		os.system('antsRegistrationSyN_sensemapMI.sh -d 3 -n ' + CPUs + ' -f ' + T1map_biasCorrected + ' -m ' + map_data + ' -o ' + out_dir + 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_ -t sr')		
+		os.system('antsRegistrationSyN_sensemapMI.sh -d 3 -n ' + CPUs + ' -f ' + T1map_biasCorrected + ' -m ' + map_data + ' -o ' + out_dir + tmp1 + ' -t sr')		
+
+# Update file name
+map_data = os.path.join(out_dir, tmp1 + 'Warped.nii.gz')
 
 ############################################################################
 # 5.2. Apply transformation to data to be mapped on the surface
 # -------------------
+if hires == True:
+	tmp2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
+else:
+	tmp2 = 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
+
 if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Apply transformation of registration to additional data')
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, tmp2)) and reprocess != True:
 		print('File exists already. Skipping process.')
-		transform_data = os.path.join(out_dir, 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
 	else:
-		os.system('antsApplyTransforms -d 3 -e 0 -n BSpline[4] --float --verbose -i ' + transform_data + ' -r ' + T1w_biasCorrected + ' -o ' + out_dir + 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz -t ' + out_dir + 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_1Warp.nii.gz -t ' + out_dir + 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_0GenericAffine.mat')
-		transform_data = os.path.join(out_dir, 'sub-' + sub + '_transform_data_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
+		os.system('antsApplyTransforms -d 3 -e 0 -n BSpline[4] --float --verbose -i ' + transform_data + ' -r ' + T1w_biasCorrected + ' -o ' + out_dir + tmp2 + ' -t ' + out_dir + tmp1 + '1Warp.nii.gz -t ' + out_dir + tmp1 + '0GenericAffine.mat')
+		
+# Update file name
+transform_data = os.path.join(out_dir, tmp2)
 
 if reprocess_map_data:
 	reprocess = False

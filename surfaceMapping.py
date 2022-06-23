@@ -463,16 +463,16 @@ if hires == True:
 	print('*****************************************************')
 	print('* Register additional data to upsampled T1map')
 	print('*****************************************************')
-	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_'
+	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected'
 else:
 	print('')
 	print('*****************************************************')
 	print('* Register additional data to T1map')
 	print('*****************************************************')
-	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected_'
+	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected'
 
 if map_file_onto_surface:
-	if os.path.isfile(os.path.join(out_dir, reg1 + 'Warped.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, reg1 + '.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 		# Register additional data non-linearly to T1map using mutual information as similarity metric
@@ -482,7 +482,7 @@ if map_file_onto_surface:
 				type_of_transform = 'SyNRA',
 				reg_iterations = (200, 100, 20 ,10),
 				verbose = True,
-				outprefix = out_dir + reg1,
+				outprefix = out_dir + reg1 + '_',
 				)
 
 		# Apply transformation
@@ -495,10 +495,10 @@ if map_file_onto_surface:
 				)
 
 		# Write file to disk
-		ants.image_write(warpedImage, out_dir + reg1 + 'Warped.nii.gz') 
+		ants.image_write(warpedImage, out_dir + reg1 + '.nii.gz') 
 
 # Update file name
-map_data = os.path.join(out_dir, reg1 + 'Warped.nii.gz')
+map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 
 ############################################################################
 # 5.2. Apply transformation to data to be mapped on the surface
@@ -526,7 +526,7 @@ if map_file_onto_surface and map_transform_file_onto_surface:
 				)
 
 		# Write file to disk
-		ants.image_write(warpedImage, out_dir + reg2 + 'Warped.nii.gz') 
+		ants.image_write(warpedImage, out_dir + reg2) 
 		
 # Update file name
 transform_data = os.path.join(out_dir, reg2)
@@ -1135,6 +1135,11 @@ if reprocess_leftHemisphere or reprocess_map_data:
 # reconstruction: the GM cortex ('region'), the underlying WM (with filled
 # subcortex and ventricles, 'inside') and the surrounding CSF (with masked
 # regions, 'background')
+print('')
+print('*****************************************************')
+print('* Region extraction of right hemisphere')
+print('*****************************************************')
+
 if reprocess_rightHemisphere or reprocess_segmentation:
 	reprocess = True
 

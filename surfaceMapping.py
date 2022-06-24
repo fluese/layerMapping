@@ -80,6 +80,10 @@ Version 0.9 (17.06.2022)
 # possible to specify a directory for mapping multiple volume onto the
 # surface.
 #
+# To enable logging of the output, one can send the screen output into a
+# file. This can be done, e.g. by using following command:
+# python3 -u surfaceMapping.py |& tee /tmp/luesebrink/test.log
+#
 
 
 ############################################################################
@@ -99,6 +103,11 @@ import nibabel as nb
 from nilearn.image import mean_img
 from nilearn.image import crop_img
 from nibabel.processing import conform
+from time import gmtime, strftime
+
+print('*****************************************************')
+print('* Processing pipeline started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+print('*****************************************************')
 
 ############################################################################
 # 1.2. Set parameters
@@ -110,11 +119,12 @@ BIDS_path = '/tmp/luesebrink/'
 # be to create a backup of the data before processing or transfer to a
 # compute server.
 # If the path does not exist, this option will be omitted and the data from
-# "BIDS_path" will be used instead.
+# "BIDS_path" will be used instead. Does not work for network drives.
+# Therefore, turned off for working at the MPI.
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/all/young/'
 
 # Define subject following BIDS
-sub = 'wtl'
+sub = 'clz'
 
 # Process with high resolution MP2RAGE slab?
 hires = True
@@ -158,13 +168,13 @@ reprocess_leftHemisphere = False
 reprocess_rightHemisphere = False
 
 # Flag to reprocess additional data
-reprocess_map_data = False
+reprocess_map_data = True
 
 # Define path to atlas (probably not needed in newer versions as it should be the default one)
 atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
 
 ############################################################################
-# 1.3. Copy data to compute server and define file names
+# 1.3. Create backtup or copy data to compute server and define file names
 # -------------------
 # Set paths
 in_dir = BIDS_path + 'sub-' + sub + '/anat/'
@@ -188,6 +198,7 @@ if os.path.isdir(copy_data_from):
 	print('')
 	print('*****************************************************')
 	print('* Data transfer to working directory.')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
 		print('Files exists already. Skipping data transfer.')
@@ -198,6 +209,7 @@ if os.path.isdir(copy_data_from):
 print('')
 print('*****************************************************')
 print('* Checking if files exists.')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 if os.path.isfile(INV1) and os.path.isfile(INV2) and os.path.isfile(T1map) and os.path.isfile(UNI):
 	print('Files exists. Good!')
@@ -216,10 +228,11 @@ if hires == True:
 print('')
 print('*****************************************************')
 print('* Checking for additional data to be mapped.')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 if os.path.isfile(map_data):
 	map_file_onto_surface = True
-	print('File found for mapping of additional data onto surface!')
+	print('File found for mapping of additional data onto surface. Good!')
 else:
 	map_file_onto_surface = False
 	print('Could not find file for surface mapping. Omitting flag!')
@@ -227,7 +240,7 @@ else:
 # Check if file for applying the transformation of the additional data exists.
 if os.path.isfile(transform_data):
 	map_transform_file_onto_surface = True
-	print('File found for applying transform of additional data!')
+	print('File found for applying transform of additional data. Good!')
 else:
 	map_transform_file_onto_surface = False
 	print('Could not find file for applying transform of additional data. Omitting flag!')
@@ -253,8 +266,9 @@ else:
 print('')
 print('*****************************************************')
 print('* MP2RAGE background cleaning')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
-
+# Check for file and start MATLAB to conduct background cleaning.
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')) and reprocess != True:
 	print('File exists already. Skipping process.')
 else:
@@ -262,6 +276,7 @@ else:
 	output = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')
 	os.system('matlab -nosplash -nodisplay -r \"removeBackgroundnoise(\'' + UNI + '\', \'' + INV1 + '\', \'' + INV2 + '\', \'' + output + '\', ' + reg + '); exit;\"')
 
+# Check for high resolution slab data and start MATLAB to conduct background cleaning.
 if hires == True:
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
@@ -278,14 +293,16 @@ T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
 # -------------------
 # Resample image to an isotropic resolution of 500 µm.
 #
-# Should be changes to the resolution of the high resolution data at some
+# Should be changed to the resolution of the high resolution data at some
 # point and not expect 500 µm data.
 if hires == True:
 	print('')
 	print('*****************************************************')
 	print('* Resampling MP2RAGE to an isotropic resolution of 500 µm')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
+	# Check for file and resample T1w and T1map using 4th order b spline interpolation.
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_resampled.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
@@ -315,8 +332,10 @@ else:
 print('')
 print('*****************************************************')
 print('* Inhomogeneity correction and skull stripping of whole brain data')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
+# Check for files and hires processing. Start MATLAB and run SPM with custom parameters.
 if hires == True:
 	checkFile = 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz'
 else:
@@ -332,6 +351,7 @@ if hires == True:
 	print('')
 	print('*****************************************************')
 	print('* Inhomogeneity correction and skull stripping of slab data')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	# Copy data and update file name
 	os.system('cp ' + T1map_slab + ' ' + out_dir + 'sub-' + sub + '_run-02_T1map.nii.gz')
@@ -358,6 +378,7 @@ else:
 	print('')
 	print('*****************************************************')
 	print('* Masking T1map')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	# Update file names	
 	T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_biasCorrected.nii.gz')
@@ -396,6 +417,7 @@ if hires == True:
 	print('')
 	print('*****************************************************')
 	print('* Register native 500 µm to upsampled 700 µm MP2RAGE data')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')) and reprocess != True:
@@ -408,13 +430,14 @@ if hires == True:
 				type_of_transform = 'SyNRA',
 				syn_metric = 'CC',
 				syn_sampling = 4,
-				reg_iterations = (200, 100, 20 ,10),
+				reg_iterations = (200, 100, 30 ,15),
 				verbose = True,
 				#outprefix = out_dir + 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked_registered_to_sub-' + sub + '_run-02_T1map_biasCorrected_masked_',
 				)
 		print('')
 		print('*****************************************************')
 		print('* Apply transformations')
+		print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 		print('*****************************************************')
 		# Apply transformation to several files.
 		warpedImage = ants.apply_transforms(
@@ -462,12 +485,14 @@ if hires == True:
 	print('')
 	print('*****************************************************')
 	print('* Register additional data to upsampled T1map')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected'
 else:
 	print('')
 	print('*****************************************************')
 	print('* Register additional data to T1map')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	reg1 = 'sub-' + sub + '_map_data_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected'
 
@@ -480,7 +505,7 @@ if map_file_onto_surface:
 				fixed = ants.image_read(T1map_biasCorrected),
 				moving = ants.image_read(map_data),
 				type_of_transform = 'SyNRA',
-				reg_iterations = (200, 100, 20 ,10),
+				reg_iterations = (200, 100, 30 ,15),
 				verbose = True,
 				outprefix = out_dir + reg1 + '_',
 				)
@@ -512,6 +537,7 @@ if map_file_onto_surface and map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Apply transformation of registration to additional data')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	if os.path.isfile(os.path.join(out_dir, reg2)) and reprocess != True:
 		print('File exists already. Skipping process.')
@@ -547,6 +573,7 @@ if hires == True:
 	print('')
 	print('*****************************************************')
 	print('* Combination of native and upsampled data')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected.nii.gz')) and reprocess != True:
@@ -579,6 +606,7 @@ if hires == True:
 print('')
 print('*****************************************************')
 print('* Segmentation with MGDM')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if reprocess_segmentation:
@@ -608,6 +636,7 @@ mgdm_results = nighres.brain.mgdm_segmentation(
 print('')
 print('*****************************************************')
 print('* Region extraction of left hemisphere')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if reprocess_leftHemisphere:
@@ -633,6 +662,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
 print('')
 print('*****************************************************')
 print('* Crop volume to left hemisphere')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_T1map_leftHemisphere_cropped.nii.gz')) and reprocess != True:
@@ -695,6 +725,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Crop additional data to left hemisphere')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_map_data_leftHemisphere_cropped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
@@ -726,6 +757,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Crop transformed data to left hemisphere')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_transform_data_leftHemisphere_cropped.nii.gz')) and reprocess != True:
@@ -762,6 +794,7 @@ if reprocess_map_data:
 print('')
 print('*****************************************************')
 print('* Cortical reconstruction with CRUISE')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 cruise = nighres.cortex.cruise_cortex_extraction(
@@ -789,6 +822,7 @@ cruise = nighres.cortex.cruise_cortex_extraction(
 print('')
 print('*****************************************************')
 print('* Extract layers across the cortical sheet (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 layers = nighres.laminar.volumetric_layering(
@@ -809,6 +843,7 @@ layers = nb.load(layers)
 print('')
 print('*****************************************************')
 print('* Extracting middle cortical layer (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-middleLayer.nii.gz')) and reprocess != True:
@@ -828,6 +863,7 @@ else:
 print('')
 print('*****************************************************')
 print('* Generate surface of middle cortical layer and inflate it (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 corticalSurface = nighres.surface.levelset_to_mesh(
@@ -854,6 +890,7 @@ inflatedSurface = nighres.surface.surface_inflation(
 print('')
 print('*****************************************************')
 print('* Profile sampling across cortical sheet (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 profile = nighres.laminar.profile_sampling(
@@ -875,6 +912,7 @@ profile = nb.load(profile)
 print('')
 print('*****************************************************')
 print('* Extracting all cortical layers (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -908,6 +946,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting deep cortical layers (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-deepLayers_mean.nii.gz')) and reprocess != True:
@@ -939,6 +978,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting inner middle cortical layers (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-innerLayers_mean.nii.gz')) and reprocess != True:
@@ -970,6 +1010,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting outer middle cortical layers (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-outerLayers_mean.nii.gz')) and reprocess != True:
@@ -1001,6 +1042,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting superficial cortical layers (left hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_extractedLayers-superficialLayers_mean.nii.gz')) and reprocess != True:
@@ -1038,6 +1080,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Profile sampling of additional data (left hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	profile = nighres.laminar.profile_sampling(
 		                profile_surface_image=layers,
@@ -1051,6 +1094,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Extracting all cortical layers of additional data (left hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_map_data_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -1087,6 +1131,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Profile sampling of transformed data (left hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	profile = nighres.laminar.profile_sampling(
 		                profile_surface_image=layers,
@@ -1100,6 +1145,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Extracting all cortical layers of additional data (left hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_transform_data_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -1138,6 +1184,7 @@ if reprocess_leftHemisphere or reprocess_map_data:
 print('')
 print('*****************************************************')
 print('* Region extraction of right hemisphere')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if reprocess_rightHemisphere or reprocess_segmentation:
@@ -1163,6 +1210,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
 print('')
 print('*****************************************************')
 print('* Crop volume to right hemisphere')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_T1map_rightHemisphere_cropped.nii.gz')) and reprocess != True:
 	print('File exists already. Skipping process.')
@@ -1219,6 +1267,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Crop additional data to right hemisphere')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_map_data_rightHemisphere_cropped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
@@ -1248,6 +1297,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Crop transformed data to right hemisphere')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_transform_data_rightHemisphere_cropped.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
@@ -1319,6 +1369,7 @@ layers = nb.load(layers)
 print('')
 print('*****************************************************')
 print('* Extracting middle cortical layer (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-middleLayer.nii.gz')) and reprocess != True:
@@ -1374,6 +1425,7 @@ profile = nb.load(profile)
 print('')
 print('*****************************************************')
 print('* Extracting all cortical layers (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -1406,6 +1458,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting deep cortical layers (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-deepLayers_mean.nii.gz')) and reprocess != True:
@@ -1437,6 +1490,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting inner middle cortical layers (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-innerLayers_mean.nii.gz')) and reprocess != True:
@@ -1468,6 +1522,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting outer middle cortical layers (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-outerLayers_mean.nii.gz')) and reprocess != True:
@@ -1499,6 +1554,7 @@ nighres.surface.surface_mesh_mapping(
 print('')
 print('*****************************************************')
 print('* Extracting superficial cortical layers (right hemisphere)')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')
 
 if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_extractedLayers-superficialLayers_mean.nii.gz')) and reprocess != True:
@@ -1536,6 +1592,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Profile sampling of additional data (right hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	profile = nighres.laminar.profile_sampling(
 		                profile_surface_image=layers,
@@ -1549,6 +1606,7 @@ if map_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Extracting all cortical layers of additional data (right hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_map_data_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -1585,6 +1643,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Profile sampling of transformed data (right hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 	profile = nighres.laminar.profile_sampling(
 		                profile_surface_image=layers,
@@ -1598,6 +1657,7 @@ if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
 	print('* Extracting all cortical layers of additional data (right hemisphere)')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
 
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_transform_data_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
@@ -1628,5 +1688,5 @@ if reprocess_rightHemisphere or reprocess_map_data:
 
 print('')
 print('*****************************************************')
-print('* Processing finished successfully.')
+print('* Processing finished successfully at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 print('*****************************************************')

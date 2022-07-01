@@ -9,7 +9,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 03. Resampling to 500 µm (only for hires option)
 04. Imhomogeneity correction and skull stripping
 05. Registration of whole brain to slab data (only for hires option)
-06. Weighted images combination of whole brain and slab data (only for hires option)
+06. Weighted image combination of whole brain and slab data (only for hires option)
 07. Atlas-guided tissue classification using MGDM
 08. Region extraction (left hemisphere) 
 09. Crop volume (left hemisphere)
@@ -20,7 +20,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 14. CRUISE cortical reconstruction (right hemisphere)
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.9 (17.06.2022)
+Version 0.93 (01.07.2022)
 '''
 
 ############################################################################
@@ -42,6 +42,7 @@ Version 0.9 (17.06.2022)
 #	MP2RAGE background cleaning
 # 3. Apply transformation to multiple volumes instead of a single file
 # 4. Differentiate between data type to be mapped on the surface automatically, e.g. QSM, fMRI, other types.
+# 5. Improve nameing of map_data and transform_data
 #
 
 ############################################################################
@@ -124,7 +125,7 @@ BIDS_path = '/tmp/luesebrink/'
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/all/young/'
 
 # Define subject following BIDS
-sub = 'clz'
+sub = 'wtl'
 
 # Process with high resolution MP2RAGE slab?
 hires = True
@@ -133,7 +134,7 @@ hires = True
 # If the path points to a non-existing file, the according option will
 # be omitted.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-map_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-01_T1map.nii.gz'
+map_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_averagedQSM.nii.gz'
 # map_data_output = ''
 
 # Transform data in the same space as 'map_data' which is then mapped onto
@@ -144,7 +145,7 @@ map_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-01_T1map.nii.gz'
 # containing NIfTI files. The transformation is then applied to all 
 # files within the directory.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-transform_data = '/tmp/luesebrink/sub-wtl/anat/sub-wtl_run-01_T1map.nii.gz'
+transform_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_Chimap.nii.gz'
 # transform_data_output = ''
 
 #
@@ -194,16 +195,16 @@ T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
 UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
 
 # Copy data
-if os.path.isdir(copy_data_from):
-	print('')
-	print('*****************************************************')
-	print('* Data transfer to working directory.')
-	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-	print('*****************************************************')
-	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
-		print('Files exists already. Skipping data transfer.')
-	else:
-		os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
+#if os.path.isdir(copy_data_from):
+print('')
+print('*****************************************************')
+print('* Data transfer to working directory.')
+print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+print('*****************************************************')
+if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
+	print('Files exists already. Skipping data transfer.')
+else:
+	os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
 
 # Check if data exists.
 print('')
@@ -500,10 +501,16 @@ if map_file_onto_surface:
 	if os.path.isfile(os.path.join(out_dir, reg1 + '.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
+		# Here, we mask the data to be registered to improve the registration
+		map_data_mask = ants.image_read(map_data)
+		map_data_mask = ants.get_mask(map_data_mask)
+		map_data_masked = ants.mask_image(ants.image_read(map_data),map_data_mask)
+		ants.image_write(map_data_masked, out_dir + 'sub-' + sub + '_map_data_masked.nii.gz')
+
 		# Register additional data non-linearly to T1map using mutual information as similarity metric
 		registeredImage = ants.registration(
-				fixed = ants.image_read(T1map_biasCorrected),
-				moving = ants.image_read(map_data),
+				fixed = ants.image_read(T1map_biasCorrected_masked),
+				moving = map_data_masked,
 				type_of_transform = 'SyNRA',
 				reg_iterations = (200, 100, 30 ,15),
 				verbose = True,

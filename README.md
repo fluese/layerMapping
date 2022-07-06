@@ -34,10 +34,9 @@ You need to change the path to the tissue probability model for the bias field c
 ## Things to do
 1. Get rid of MATLAB dependencies
 2. Specify files, paths, and flags from outside the script
-3. Apply transformation to multiple volumes instead of a single file
 
 ## Version
-0.94 (05.07.2022)
+0.95 (06.07.2022)
 
 ## Contact information
 Dr. Falk Luesebrink

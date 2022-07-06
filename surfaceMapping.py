@@ -1466,9 +1466,9 @@ if map_transform_file_onto_surface:
 	if isinstance(transform_data_output,list):
 		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[-1] + '_rightHemisphere_cropped.nii.gz')) and reprocess != True:
 			print('File exists already. Skipping process.')
-			transform_data_leftHemisphere = []
+			transform_data_rightHemisphere = []
 			for tmp in transform_data_output:
-				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + tmp + '_rightHemisphere_cropped.nii.gz'))
+				transform_data_rightHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + tmp + '_rightHemisphere_cropped.nii.gz'))
 		else:
 			# Load grey matter image, binarize image, and get information for cropping
 			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-rcrgm.nii.gz'))
@@ -1479,13 +1479,13 @@ if map_transform_file_onto_surface:
 
 			# Apply cropping
 			length = len(transform_data)
-			transform_data_leftHemisphere = []
+			transform_data_rightHemisphere = []
 			for i in range(length):
 				tmp1 = nb.load(transform_data[i])
 				tmp2 = tmp1.get_fdata()
 				tmp3 = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
 				nb.save(tmp3, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_cropped.nii.gz'))
-				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_cropped.nii.gz'))
+				transform_data_rightHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_cropped.nii.gz'))
 
 			del img
 			del tmp
@@ -1497,7 +1497,7 @@ if map_transform_file_onto_surface:
 	else:
 		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')) and reprocess != True:
 			print('File exists already. Skipping process.')
-			transform_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')
+			transform_data_rightHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')
 		else:
 			# Load grey matter image, binarize image, and get information for cropping
 			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-lcrgm.nii.gz'))
@@ -1509,8 +1509,8 @@ if map_transform_file_onto_surface:
 			# Apply cropping
 			tmp1 = nb.load(transform_data)
 			tmp2 = tmp1.get_fdata()
-			transform_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
-			nb.save(transform_data_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz'))
+			transform_data_rightHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
+			nb.save(transform_data_rightHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz'))
 
 			del img
 			del tmp

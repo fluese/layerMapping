@@ -1263,7 +1263,7 @@ if map_transform_file_onto_surface:
 		for i in range(length):
 			profile = nighres.laminar.profile_sampling(
 						profile_surface_image=layers,
-						intensity_image=transform_data_leftHemisphere,
+						intensity_image=transform_data_leftHemisphere[i],
 						save_data=True,
 						overwrite=reprocess,
 						output_dir=out_dir,
@@ -1848,7 +1848,7 @@ if map_transform_file_onto_surface:
 		for i in range(length):
 			profile = nighres.laminar.profile_sampling(
 						profile_surface_image=layers,
-						intensity_image=transform_data_leftHemisphere,
+						intensity_image=transform_data_rightHemisphere[i],
 						save_data=True,
 						overwrite=reprocess,
 						output_dir=out_dir,
@@ -1857,7 +1857,7 @@ if map_transform_file_onto_surface:
 
 			print('')
 			print('*****************************************************')
-			print('* Extracting all cortical layers of additional data (left hemisphere)')
+			print('* Extracting all cortical layers of additional data (right hemisphere)')
 			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 			print('*****************************************************')
 
@@ -1884,7 +1884,7 @@ if map_transform_file_onto_surface:
 	else:
 		profile = nighres.laminar.profile_sampling(
 				        profile_surface_image=layers,
-				        intensity_image=transform_data_leftHemisphere,
+				        intensity_image=transform_data_rightHemisphere,
 				        save_data=True,
 				        overwrite=reprocess,
 				        output_dir=out_dir,
@@ -1893,7 +1893,7 @@ if map_transform_file_onto_surface:
 
 		print('')
 		print('*****************************************************')
-		print('* Extracting all cortical layers of additional data (left hemisphere)')
+		print('* Extracting all cortical layers of additional data (right hemisphere)')
 		print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 		print('*****************************************************')
 

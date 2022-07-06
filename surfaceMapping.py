@@ -75,7 +75,7 @@ Version 0.95 (06.07.2022)
 #
 # To enable logging of the output, one can send the screen output into a
 # file. This can be done, e.g. by using following command:
-# python3 -u surfaceMapping.py |& tee /tmp/luesebrink/surfaceMapping.log
+# python3 -u surfaceMapping.py |& tee -a /tmp/luesebrink/surfaceMapping.log
 #
 # A few flags have been set up which allow to reprocess data at various
 # stages of the pipeline (e.g. entirely, from the segmentation onwards,
@@ -130,12 +130,11 @@ map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.
 
 # Transform data in the same space as 'map_data' which is then mapped onto
 # the surface. Could for example be resulting maps of fMRI data. Requries
-# full path to a NIfTI file.
-# In the future, this option will accept a directory containing NIfTI files.
-# The transformation is then applied to all files within the directory.
+# an absolute path to a NIfTI file or a directory containing compressed NIfTI
+# files. The transformation is then applied to all files within the directory.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-# If the path points to a non-existing file, the according option will
-# be omitted.
+# If the path points to a non-existing file or directory, the according
+# option will be omitted.
 #transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
@@ -161,8 +160,9 @@ reprocess_map_data = False
 # "BIDS_path" will be used instead. Does not work for network drives.
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
 
-# Define path to atlas. By default an older version of the altas is used as
-# compared to this newer one. The pipeline has been tested with version
+# Define path to atlas. By default an old version of the altas is used. In order
+# to use a recent one, please add the absolute path to that atlas. In can be
+# found where nighres is installed. The pipeline has been tested with version
 # 3.0.9. only.
 atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
 

@@ -20,7 +20,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 14. CRUISE cortical reconstruction (right hemisphere)
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.94 (05.07.2022)
+Version 0.95 (06.07.2022)
 '''
 
 ############################################################################
@@ -40,7 +40,6 @@ Version 0.94 (05.07.2022)
 # 	Switch from SPM's bias correction method to N4 of ANTs for easier use
 # 	Re-write the weightedAverage script for Python
 #	MP2RAGE background cleaning
-# 3. Apply transformation to multiple volumes instead of a single file
 #
 
 ############################################################################
@@ -97,6 +96,7 @@ import nighres
 import os
 import ants
 import nibabel as nb
+import glob
 from nilearn.image import mean_img
 from nilearn.image import crop_img
 from nibabel.processing import conform
@@ -110,15 +110,7 @@ print('*****************************************************')
 # 1.2. Set parameters
 # -------------------
 # Define BIDS path
-BIDS_path = '/tmp/luesebrink/'
-
-# Define path from where data is to be copied into "BIDS_path". Could either
-# be to create a backup of the data before processing or transfer to a
-# compute server.
-# If the path does not exist, this option will be omitted and the data from
-# "BIDS_path" will be used instead. Does not work for network drives.
-# Therefore, turned off for working at the MPI.
-copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/all/young/'
+BIDS_path = '/tmp/luesebrink/sample_data/'
 
 # Define subject following BIDS
 sub = 'wtl'
@@ -132,8 +124,9 @@ hires = True
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file, the according option will
 # be omitted.
-#map_data = '/tmp/luesebrink/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
-map_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_magn_average.nii.gz'
+#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
+#map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
+map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
 
 # Transform data in the same space as 'map_data' which is then mapped onto
 # the surface. Could for example be resulting maps of fMRI data. Requries
@@ -143,9 +136,10 @@ map_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_magn_average.nii.gz'
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file, the according option will
 # be omitted.
-#transform_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
-transform_data = '/tmp/luesebrink/derivatives/sub-wtl/sub-wtl_Chimap.nii.gz'
-
+#transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
+transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
 
 # Flag to overwrite all existing data
 reprocess = False
@@ -157,14 +151,24 @@ reprocess_segmentation = False
 reprocess_leftHemisphere = False
 reprocess_rightHemisphere = False
 
-# Flag to reprocess additional data
-reprocess_map_data = True
+# Flag to reprocess additional mapping (and transformation) data
+reprocess_map_data = False
 
-# Define path to atlas (probably not needed in newer versions as it should be the default one, need to check that)
-#atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
+# Define path from where data is to be copied into "BIDS_path". Could either
+# be to create a backup of the data before processing or transfer to a
+# compute server.
+# If the path does not exist, this option will be omitted and the data from
+# "BIDS_path" will be used instead. Does not work for network drives.
+copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
+
+# Define path to atlas. By default an older version of the altas is used as
+# compared to this newer one. The pipeline has been tested with version
+# 3.0.9. only.
+atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
 
 ############################################################################
-# 1.3. Create backtup or copy data to compute server and define file names
+# 1.3. Define file names (and optionally create backup or copy data to
+# compute server)
 # -------------------
 # Set paths
 in_dir = BIDS_path + 'sub-' + sub + '/anat/'
@@ -173,27 +177,40 @@ os.system('mkdir -p ' + in_dir)
 os.system('mkdir -p ' + out_dir)
 
 # Define file names
-INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
-INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
-T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
-UNI = os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz')
+if hires == True:
+	INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
+	INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
+	T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
+	UNI = os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz')
 
-INV1_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_inv-1_MP2RAGE.nii.gz')
-INV2_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_inv-2_MP2RAGE.nii.gz')
-T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
-UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
+	INV1_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_inv-1_MP2RAGE.nii.gz')
+	INV2_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_inv-2_MP2RAGE.nii.gz')
+	T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
+	UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
+else:
+	INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
+	INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
+	T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
+	UNI = os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz')
 
-# Copy data
+# Copy data if path exists
 if os.path.isdir(copy_data_from):
 	print('')
 	print('*****************************************************')
 	print('* Data transfer to working directory.')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(in_dir, 'sub-' + sub + '_run-01_UNIT1.nii.gz'))  and reprocess != True:
+	if os.path.isfile(UNI)  and reprocess != True:
 		print('Files exists already. Skipping data transfer.')
 	else:
-		os.system('scp -r ' + copy_data_from + sub + '/* ' + BIDS_path + 'sub-' + sub + '/anat/')
+		os.system('scp -r ' + copy_data_from + ' ' + BIDS_path)
+else:
+	print('')
+	print('*****************************************************')
+	print('* Data transfer to working directory.')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+	print('*****************************************************')
+	print('No path found to copy data from found. Continuing without copying data!')
 
 # Check if data exists.
 print('')
@@ -223,40 +240,63 @@ print('*****************************************************')
 if os.path.isfile(map_data):
 	map_file_onto_surface = True
 	print('File found for mapping of additional data onto surface. Good!')
+
+	# Change name string for output of map data. This will first remove the path
+	# of given the file for an appropriate naming of the output data.
+	file_name = os.path.basename(map_data)
+	index_of_dot = file_name.index('.')
+	map_data_output = file_name[:index_of_dot]
+	# This will remove the sub-<label> string if the data is already BIDS
+	# formatted. It'll be added during creation of the output data later
+	# again.
+	if 'sub-' + sub in map_data_output:
+		map_data_output = map_data_output[8:]
 else:
 	map_file_onto_surface = False
 	print('Could not find file for surface mapping. Omitting flag!')
 
 # Check if file for applying the transformation of the additional data exists.
-if os.path.isfile(transform_data):
-	map_transform_file_onto_surface = True
-	print('File found for applying transform of additional data. Good!')
-else:
+if os.path.isfile(transform_data) == False and os.path.isdir(transform_data) == False:
 	map_transform_file_onto_surface = False
-	print('Could not find file for applying transform of additional data. Omitting flag!')
+	print('Could not find file or path for applying transform of additional data. Omitting flag!')
+elif os.path.isdir(transform_data) or os.path.isfile(transform_data):
+	map_transform_file_onto_surface = True
+	print('File or path found for applying transform of additional data. Good!')
+
+	# Change name string for output of transformed data. This will remove the 
+	# path of the input given for an appropriate naming of the output data.
+	# In case a path is given as input a list with all compressed NIfTI files
+	# will be created. Then the path from that list will be stripped to create
+	# a list for appropriate naming of the output data.
+	if os.path.isdir(transform_data):
+		transform_data = glob.glob(transform_data + '*.nii.gz')
+		transform_data_output = []
+		if isinstance(transform_data, list):
+			for tmp in transform_data:
+				file_name = os.path.basename(tmp)
+				index_of_dot = file_name.index('.')
+				tmp = file_name[:index_of_dot]
+				# This will remove the sub-<label> string if the data is already BIDS
+				# formatted. It'll be added during creation of the output data later
+				# again.
+				if 'sub-' + sub in tmp:
+					tmp = tmp[8:]
+				transform_data_output.append(tmp)
+	else:
+		file_name = os.path.basename(transform_data)
+		index_of_dot = file_name.index('.')
+		transform_data_output = file_name[:index_of_dot]
+		# This will remove the sub-<label> string if the data is already BIDS
+		# formatted. It'll be added during creation of the output data later
+		# again.	
+		if 'sub-' + sub in transform_data_output:
+			transform_data_output = transform_data_output[8:]
 
 # Set flag if high resolution slab is used.
 if hires == True:
 	filename = '_merged_run-01+02'
 else:
 	filename = '_run-01'
-
-# Change name string for output of map data in case it is BIDS formatted
-# (Will remove the sub-<label>_ string)
-file_name = os.path.basename(map_data)
-index_of_dot = file_name.index('.')
-map_data_output = file_name[:index_of_dot]
-if 'sub-' + sub in map_data_output:
-	map_data_output = map_data_output[8:]
-
-# Change name string for output of transformed data in case it is BIDS formatted
-# (Will remove the sub-<label>_ string)
-file_name = os.path.basename(transform_data)
-index_of_dot = file_name.index('.')
-transform_data_output = file_name[:index_of_dot]
-if 'sub-' + sub in transform_data_output:
-	transform_data_output = transform_data_output[8:]
-
 
 ############################################################################
 # 2. MP2RAGE background cleaning
@@ -543,10 +583,20 @@ map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 ############################################################################
 # 5.2. Apply transformation to data to be mapped on the surface
 # -------------------
-if hires == True:
-	reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
+# Define file name for output of transformation.
+if isinstance(transform_data_output, list):
+	reg2 = []
+	for name in transform_data_output:
+		if hires == True:
+			reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
+		else:
+			reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz')
+
 else:
-	reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
+	if hires == True:
+		reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
+	else:
+		reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
 
 if map_file_onto_surface and map_transform_file_onto_surface:
 	print('')
@@ -554,23 +604,50 @@ if map_file_onto_surface and map_transform_file_onto_surface:
 	print('* Apply transformation of registration to additional data')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, reg2)) and reprocess != True:
-		print('File exists already. Skipping process.')
-	else:
-		# Apply transformation
-		warpedImage = ants.apply_transforms(
-				fixed = ants.image_read(T1map_biasCorrected),
-				moving = ants.image_read(transform_data),
-		                transformlist = registeredImage['invtransforms'],
-				interpolator = 'bSpline',
-				verbose = True,
-				)
+	# Check if a list exists and if so, if the last file of list exists already.
+	if isinstance(transform_data, list):
+		if os.path.isfile(os.path.join(out_dir, reg2[-1])) and reprocess != True:
+			print('File exists already. Skipping process.')
+		else:
+			# Iterate over length of list
+			length = len(transform_data)
+			for i in range(length):
+				# Apply transformation
+				warpedImage = ants.apply_transforms(
+						fixed = ants.image_read(T1map_biasCorrected),
+						moving = ants.image_read(transform_data[i]),
+						transformlist = registeredImage['invtransforms'],
+						interpolator = 'bSpline',
+						verbose = True,
+						)
 
-		# Write file to disk
-		ants.image_write(warpedImage, out_dir + reg2) 
+				# Write file to disk
+				ants.image_write(warpedImage, out_dir + reg2[i])
+
+	else:
+	# Check if output exists already.
+		if os.path.isfile(os.path.join(out_dir, reg2)) and reprocess != True:
+			print('File exists already. Skipping process.')
+		else:
+			# Apply transformation
+			warpedImage = ants.apply_transforms(
+					fixed = ants.image_read(T1map_biasCorrected),
+					moving = ants.image_read(transform_data),
+				        transformlist = registeredImage['invtransforms'],
+					interpolator = 'bSpline',
+					verbose = True,
+					)
+
+			# Write file to disk
+			ants.image_write(warpedImage, out_dir + reg2) 
 		
 # Update file name
-transform_data = os.path.join(out_dir, reg2)
+if isinstance(reg2, list):
+	transform_data = []
+	for tmp in reg2:
+		transform_data.append(os.path.join(out_dir, tmp))		
+else:
+	transform_data = os.path.join(out_dir, reg2)
 
 if reprocess_map_data:
 	reprocess = False
@@ -634,7 +711,7 @@ mgdm_results = nighres.brain.mgdm_segmentation(
 		#contrast_type2='Mp2rage7T',
                 n_steps=10,
                 max_iterations=1000,
-                #atlas_file=atlas,
+                atlas_file=atlas,
                 normalize_qmaps=False,
                 save_data=True,
                 overwrite=reprocess,
@@ -661,7 +738,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
     	levelset_boundary=mgdm_results['distance'],
         maximum_membership=mgdm_results['memberships'],
         maximum_label=mgdm_results['labels'],
-        #atlas_file=atlas,
+        atlas_file=atlas,
         extracted_region='left_cerebrum',
         save_data=True,
         overwrite=reprocess,
@@ -774,29 +851,61 @@ if map_transform_file_onto_surface:
 	print('* Crop transformed data to left hemisphere')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
+	# Check if a list of multiple files exists to be transformed
+	if isinstance(transform_data_output,list):
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[-1] + '_leftHemisphere_cropped.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			transform_data_leftHemisphere = []
+			for tmp in transform_data_output:
+				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + tmp + '_leftHemisphere_cropped.nii.gz'))
+		else:
+			# Load grey matter image, binarize image, and get information for cropping
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
+			tmp = img.get_fdata()
+			tmp[tmp<0] = 0
+			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
+			crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz')) and reprocess != True:
-		print('File exists already. Skipping process.')
-		transform_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz')
+			# Apply cropping
+			length = len(transform_data)
+			transform_data_leftHemisphere = []
+			for i in range(length):
+				tmp1 = nb.load(transform_data[i])
+				tmp2 = tmp1.get_fdata()
+				tmp3 = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
+				nb.save(tmp3, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_cropped.nii.gz'))
+				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_cropped.nii.gz'))
+
+			del img
+			del tmp
+			del tmp1
+			del tmp2
+			del tmp3
+			print('Done.')
+
 	else:
-		# Load grey matter image, binarize image, and get information for cropping
-		img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
-		tmp = img.get_fdata()
-		tmp[tmp<0] = 0
-		tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
-		crop,coord = crop_img(tmp, pad=4, return_offset=True)
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			transform_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz')
+		else:
+			# Load grey matter image, binarize image, and get information for cropping
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_leftHemisphere_xmask-lcrgm.nii.gz'))
+			tmp = img.get_fdata()
+			tmp[tmp<0] = 0
+			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
+			crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
-		# Apply cropping
-		tmp1 = nb.load(transform_data)
-		tmp2 = tmp1.get_fdata()
-		transform_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
-		nb.save(transform_data_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz'))
+			# Apply cropping
+			tmp1 = nb.load(transform_data)
+			tmp2 = tmp1.get_fdata()
+			transform_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
+			nb.save(transform_data_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_cropped.nii.gz'))
 
-		del img
-		del tmp
-		del tmp1
-		del tmp2
-		print('Done.')
+			del img
+			del tmp
+			del tmp1
+			del tmp2
+			print('Done.')
 
 if reprocess_map_data:
 	reprocess = False
@@ -1147,42 +1256,82 @@ if map_transform_file_onto_surface:
 	print('*****************************************************')
 	print('* Profile sampling of transformed data (left hemisphere)')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-	print('*****************************************************')
-	profile = nighres.laminar.profile_sampling(
-		                profile_surface_image=layers,
-		                intensity_image=transform_data_leftHemisphere,
-		                save_data=True,
-		                overwrite=reprocess,
-		                output_dir=out_dir,
-		                file_name='sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers')['result']
-	profile = nb.load(profile)
+	print('*****************************************************')	
 
-	print('')
-	print('*****************************************************')
-	print('* Extracting all cortical layers of additional data (left hemisphere)')
-	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-	print('*****************************************************')
+	if isinstance(transform_data_output,list):
+		length = len(transform_data_output)
+		for i in range(length):
+			profile = nighres.laminar.profile_sampling(
+						profile_surface_image=layers,
+						intensity_image=transform_data_leftHemisphere,
+						save_data=True,
+						overwrite=reprocess,
+						output_dir=out_dir,
+						file_name='sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers')['result']
+			profile = nb.load(profile)
 
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
-		print('File exists already. Skipping process.')
-		meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			print('')
+			print('*****************************************************')
+			print('* Extracting all cortical layers of additional data (left hemisphere)')
+			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+			print('*****************************************************')
+
+			if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
+				print('File exists already. Skipping process.')
+				meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			else:
+				tmp = profile.get_fdata()[:,:,:,1:19]
+				extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
+				nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers.nii.gz'))
+				meanProfile = mean_img(extractedLayers)
+				nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+				del tmp
+
+			nighres.surface.surface_mesh_mapping(
+						intensity_image=meanProfile,
+						surface_mesh=corticalSurface['result'],
+						inflated_mesh=inflatedSurface['result'],
+						mapping_method='closest_point',
+						save_data=True,
+						overwrite=reprocess,
+						output_dir=out_dir,
+						file_name='sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers.vtk')
 	else:
-		tmp = profile.get_fdata()[:,:,:,1:19]
-		extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
-		nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers.nii.gz'))
-		meanProfile = mean_img(extractedLayers)
-		nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
-		del tmp
+		profile = nighres.laminar.profile_sampling(
+				        profile_surface_image=layers,
+				        intensity_image=transform_data_leftHemisphere,
+				        save_data=True,
+				        overwrite=reprocess,
+				        output_dir=out_dir,
+				        file_name='sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers')['result']
+		profile = nb.load(profile)
 
-	nighres.surface.surface_mesh_mapping(
-		                intensity_image=meanProfile,
-		                surface_mesh=corticalSurface['result'],
-		                inflated_mesh=inflatedSurface['result'],
-		                mapping_method='closest_point',
-		                save_data=True,
-		                overwrite=reprocess,
-		                output_dir=out_dir,
-		                file_name='sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers.vtk')
+		print('')
+		print('*****************************************************')
+		print('* Extracting all cortical layers of additional data (left hemisphere)')
+		print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+		print('*****************************************************')
+
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+		else:
+			tmp = profile.get_fdata()[:,:,:,1:19]
+			extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
+			nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers.nii.gz'))
+			meanProfile = mean_img(extractedLayers)
+			nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			del tmp
+
+		nighres.surface.surface_mesh_mapping(
+				        intensity_image=meanProfile,
+				        surface_mesh=corticalSurface['result'],
+				        inflated_mesh=inflatedSurface['result'],
+				        mapping_method='closest_point',
+				        save_data=True,
+				        overwrite=reprocess,
+				        output_dir=out_dir,
+				        file_name='sub-' + sub + '_' + transform_data_output + '_leftHemisphere_extractedLayers-allLayers.vtk')
 
 # Set reprocess flag to false in case left hemisphere or mapping of
 # additional data should be done only.
@@ -1209,7 +1358,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
                                             levelset_boundary=mgdm_results['distance'],
                                             maximum_membership=mgdm_results['memberships'],
                                             maximum_label=mgdm_results['labels'],
-			                    #atlas_file=atlas,
+			                    atlas_file=atlas,
                                             extracted_region='right_cerebrum',
                                             save_data=True,
                                             overwrite=reprocess,
@@ -1314,26 +1463,60 @@ if map_transform_file_onto_surface:
 	print('* Crop transformed data to right hemisphere')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')) and reprocess != True:
-		print('File exists already. Skipping process.')
-		transform_data_rightHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')
+	if isinstance(transform_data_output,list):
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[-1] + '_rightHemisphere_cropped.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			transform_data_leftHemisphere = []
+			for tmp in transform_data_output:
+				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + tmp + '_rightHemisphere_cropped.nii.gz'))
+		else:
+			# Load grey matter image, binarize image, and get information for cropping
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-lcrgm.nii.gz'))
+			tmp = img.get_fdata()
+			tmp[tmp<0] = 0
+			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
+			crop,coord = crop_img(tmp, pad=4, return_offset=True)
+
+			# Apply cropping
+			length = len(transform_data)
+			transform_data_leftHemisphere = []
+			for i in range(length):
+				tmp1 = nb.load(transform_data[i])
+				tmp2 = tmp1.get_fdata()
+				tmp3 = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
+				nb.save(tmp3, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_cropped.nii.gz'))
+				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_cropped.nii.gz'))
+
+			del img
+			del tmp
+			del tmp1
+			del tmp2
+			del tmp3
+			print('Done.')
+
 	else:
-		img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-rcrgm.nii.gz'))
-		tmp = img.get_fdata()
-		tmp[tmp<0] = 0
-		tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
-		crop,coord = crop_img(tmp, pad=4, return_offset=True)
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			transform_data_leftHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')
+		else:
+			# Load grey matter image, binarize image, and get information for cropping
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-lcrgm.nii.gz'))
+			tmp = img.get_fdata()
+			tmp[tmp<0] = 0
+			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)
+			crop,coord = crop_img(tmp, pad=4, return_offset=True)
 
-		tmp1 = nb.load(transform_data)
-		tmp2 = tmp1.get_fdata()
-		transform_data_rightHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
-		nb.save(transform_data_rightHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz'))
+			# Apply cropping
+			tmp1 = nb.load(transform_data)
+			tmp2 = tmp1.get_fdata()
+			transform_data_leftHemisphere = nb.Nifti1Image(tmp2[coord], affine=tmp1.affine, header=tmp1.header)
+			nb.save(transform_data_leftHemisphere, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz'))
 
-		del img
-		del tmp
-		del tmp1
-		del tmp2
-		print('Done.')
+			del img
+			del tmp
+			del tmp1
+			del tmp2
+			print('Done.')
 
 if reprocess_map_data:
 	reprocess = False
@@ -1660,41 +1843,80 @@ if map_transform_file_onto_surface:
 	print('* Profile sampling of transformed data (right hemisphere)')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 	print('*****************************************************')
-	profile = nighres.laminar.profile_sampling(
-		                profile_surface_image=layers,
-		                intensity_image=transform_data_rightHemisphere,
-		                save_data=True,
-		                overwrite=reprocess,
-		                output_dir=out_dir,
-		                file_name='sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers')['result']
-	profile = nb.load(profile)
+	if isinstance(transform_data_output,list):
+		length = len(transform_data_output)
+		for i in range(length):
+			profile = nighres.laminar.profile_sampling(
+						profile_surface_image=layers,
+						intensity_image=transform_data_leftHemisphere,
+						save_data=True,
+						overwrite=reprocess,
+						output_dir=out_dir,
+						file_name='sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers')['result']
+			profile = nb.load(profile)
 
-	print('')
-	print('*****************************************************')
-	print('* Extracting all cortical layers of additional data (right hemisphere)')
-	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-	print('*****************************************************')
+			print('')
+			print('*****************************************************')
+			print('* Extracting all cortical layers of additional data (left hemisphere)')
+			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+			print('*****************************************************')
 
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
-		print('File exists already. Skipping process.')
-		meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
+				print('File exists already. Skipping process.')
+				meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			else:
+				tmp = profile.get_fdata()[:,:,:,1:19]
+				extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
+				nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers.nii.gz'))
+				meanProfile = mean_img(extractedLayers)
+				nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+				del tmp
+
+			nighres.surface.surface_mesh_mapping(
+						intensity_image=meanProfile,
+						surface_mesh=corticalSurface['result'],
+						inflated_mesh=inflatedSurface['result'],
+						mapping_method='closest_point',
+						save_data=True,
+						overwrite=reprocess,
+						output_dir=out_dir,
+						file_name='sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers.vtk')
 	else:
-		tmp = profile.get_fdata()[:,:,:,1:19]
-		extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
-		nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers.nii.gz'))
-		meanProfile = mean_img(extractedLayers)
-		nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
-		del tmp
+		profile = nighres.laminar.profile_sampling(
+				        profile_surface_image=layers,
+				        intensity_image=transform_data_leftHemisphere,
+				        save_data=True,
+				        overwrite=reprocess,
+				        output_dir=out_dir,
+				        file_name='sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers')['result']
+		profile = nb.load(profile)
 
-	nighres.surface.surface_mesh_mapping(
-		                intensity_image=meanProfile,
-		                surface_mesh=corticalSurface['result'],
-		                inflated_mesh=inflatedSurface['result'],
-		                mapping_method='closest_point',
-		                save_data=True,
-		                overwrite=reprocess,
-		                output_dir=out_dir,
-		                file_name='sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers.vtk')
+		print('')
+		print('*****************************************************')
+		print('* Extracting all cortical layers of additional data (left hemisphere)')
+		print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+		print('*****************************************************')
+
+		if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
+			print('File exists already. Skipping process.')
+			meanProfile = nb.load(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+		else:
+			tmp = profile.get_fdata()[:,:,:,1:19]
+			extractedLayers = nb.Nifti1Image(tmp, affine=layers.affine, header=layers.header)
+			nb.save(extractedLayers, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers.nii.gz'))
+			meanProfile = mean_img(extractedLayers)
+			nb.save(meanProfile, os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz'))
+			del tmp
+
+		nighres.surface.surface_mesh_mapping(
+				        intensity_image=meanProfile,
+				        surface_mesh=corticalSurface['result'],
+				        inflated_mesh=inflatedSurface['result'],
+				        mapping_method='closest_point',
+				        save_data=True,
+				        overwrite=reprocess,
+				        output_dir=out_dir,
+				        file_name='sub-' + sub + '_' + transform_data_output + '_rightHemisphere_extractedLayers-allLayers.vtk')
 
 # Set reprocess flag to false in case left hemisphere or mapping of
 # additional data should be done only.

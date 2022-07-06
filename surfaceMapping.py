@@ -120,8 +120,8 @@ sub = 'wtl'
 # the second run must be the higher resolution MP2RAGE slab volume.
 hires = True
 
-# Map specific file onto the surface. Requries full path to a NIfTI file.
-# Results will be written to <BIDS_path>/derivatives/sub-<label>/.
+# Map specific file onto the surface. Requries absolute path to a NIfTI
+# file. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file, the according option will
 # be omitted.
 #map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
@@ -1261,6 +1261,12 @@ if map_transform_file_onto_surface:
 	if isinstance(transform_data_output,list):
 		length = len(transform_data_output)
 		for i in range(length):
+			print('')
+			print('*****************************************************')
+			print('* Profile sampling and extracting all cortical layers')
+			print('* of additional data (left hemisphere)')
+			print('*****************************************************')
+
 			profile = nighres.laminar.profile_sampling(
 						profile_surface_image=layers,
 						intensity_image=transform_data_leftHemisphere[i],
@@ -1269,12 +1275,6 @@ if map_transform_file_onto_surface:
 						output_dir=out_dir,
 						file_name='sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers')['result']
 			profile = nb.load(profile)
-
-			print('')
-			print('*****************************************************')
-			print('* Extracting all cortical layers of additional data (left hemisphere)')
-			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-			print('*****************************************************')
 
 			if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_leftHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
 				print('File exists already. Skipping process.')
@@ -1455,7 +1455,7 @@ if map_file_onto_surface:
 		print('Done.')
 
 ############################################################################
-# 13.2. Crop additionally transformed data to left hemispehre
+# 13.2. Crop additionally transformed data to right hemispehre
 # -------------------
 if map_transform_file_onto_surface:
 	print('')
@@ -1471,7 +1471,7 @@ if map_transform_file_onto_surface:
 				transform_data_leftHemisphere.append(os.path.join(out_dir, 'sub-' + sub + '_' + tmp + '_rightHemisphere_cropped.nii.gz'))
 		else:
 			# Load grey matter image, binarize image, and get information for cropping
-			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-lcrgm.nii.gz'))
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-rcrgm.nii.gz'))
 			tmp = img.get_fdata()
 			tmp[tmp<0] = 0
 			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)

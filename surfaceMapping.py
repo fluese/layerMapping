@@ -70,8 +70,9 @@ Version 0.95 (06.07.2022)
 #
 # Furthermore, you can specify a single volume which will be mapped on the
 # surface additionally. This is meant for mapping another contrast  on the
-# surface, e.g. QSM data or fMRI results. Soon, it will be possible to
-# specify a directory for mapping multiple volume onto the surface.
+# surface, e.g. QSM data or fMRI results. The resulting transformation can
+# be applied either to another volume or to all compressed NIfTI files of
+# an entire directory.
 #
 # To enable logging of the output, one can send the screen output into a
 # file. This can be done, e.g. by using following command:
@@ -124,8 +125,8 @@ hires = True
 # file. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file, the according option will
 # be omitted.
-#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
 #map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
+#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
 map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
 
 # Transform data in the same space as 'map_data' which is then mapped onto
@@ -135,8 +136,8 @@ map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.
 # Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
-#transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
 transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
 
@@ -144,7 +145,7 @@ transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
 reprocess = False
 
 # Flag to start reprocessing from segmentation onwards
-reprocess_segmentation = False
+reprocess_segmentation = True
 
 # Flag to reprocess left or right hemisphere only
 reprocess_leftHemisphere = False
@@ -160,11 +161,9 @@ reprocess_map_data = False
 # "BIDS_path" will be used instead. Does not work for network drives.
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
 
-# Define path to atlas. By default an old version of the altas is used. In order
-# to use a recent one, please add the absolute path to that atlas. In can be
-# found where nighres is installed. The pipeline has been tested with version
-# 3.0.9. only.
-atlas = '/data/hu_luesebrink/venv/nighres/lib/python3.6/site-packages/nighres/atlases/brain-segmentation-prior3.0/brain-atlas-quant-3.0.9.txt'
+# Define path to atlas. Here, we use custom priors which seem to work well
+# with 7T MP2RAGE data collected in Magdeburg, Germany. 
+atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'brain-atlas-quant-3.0.9_customPriors.txt')
 
 ############################################################################
 # 1.3. Define file names (and optionally create backup or copy data to
@@ -1002,6 +1001,7 @@ inflatedSurface = nighres.surface.surface_inflation(
                         surface_mesh=corticalSurface['result'],
 			max_iter=10000,
 			max_curv=8.0,
+			#regularization=1.0,
                         save_data=True,
                         overwrite=reprocess,
                         file_name='sub-' + sub + filename + '_leftHemisphere_extractedLayers-middleLayer.vtk',
@@ -1263,8 +1263,7 @@ if map_transform_file_onto_surface:
 		for i in range(length):
 			print('')
 			print('*****************************************************')
-			print('* Profile sampling and extracting all cortical layers')
-			print('* of additional data (left hemisphere)')
+			print('* Profile sampling and extracting all cortical layers of additional data (left hemisphere)')
 			print('*****************************************************')
 
 			profile = nighres.laminar.profile_sampling(
@@ -1595,6 +1594,7 @@ inflatedSurface = nighres.surface.surface_inflation(
                         surface_mesh=corticalSurface['result'],
 			max_iter=10000,
 			max_curv=8.0,
+			#regularization=1.0,
                         save_data=True,
                         overwrite=reprocess,
                         file_name='sub-' + sub + filename + '_rightHemisphere_extractedLayers-middleLayer.vtk',
@@ -1846,6 +1846,10 @@ if map_transform_file_onto_surface:
 	if isinstance(transform_data_output,list):
 		length = len(transform_data_output)
 		for i in range(length):
+			print('')
+			print('*****************************************************')
+			print('* Profile sampling and extracting all cortical layers of additional data (right hemisphere)')
+			print('*****************************************************')
 			profile = nighres.laminar.profile_sampling(
 						profile_surface_image=layers,
 						intensity_image=transform_data_rightHemisphere[i],
@@ -1854,12 +1858,6 @@ if map_transform_file_onto_surface:
 						output_dir=out_dir,
 						file_name='sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers')['result']
 			profile = nb.load(profile)
-
-			print('')
-			print('*****************************************************')
-			print('* Extracting all cortical layers of additional data (right hemisphere)')
-			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-			print('*****************************************************')
 
 			if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output[i] + '_rightHemisphere_extractedLayers-allLayers_mean.nii.gz')) and reprocess != True:
 				print('File exists already. Skipping process.')

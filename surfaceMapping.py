@@ -163,7 +163,7 @@ copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
 
 # Define path to atlas. Here, we use custom priors which seem to work well
 # with 7T MP2RAGE data collected in Magdeburg, Germany. 
-atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'brain-atlas-quant-3.0.9_customPriors.txt')
+atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas', 'brain-atlas-quant-3.0.9_customPriors.txt')
 
 ############################################################################
 # 1.3. Define file names (and optionally create backup or copy data to

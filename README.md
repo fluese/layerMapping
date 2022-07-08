@@ -29,7 +29,7 @@ Things needed to be installed:
 3. MATLAB
 4. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
-6. Custom MATLAB scripts (weightedAverage and biasCorrection)
+6. Custom MATLAB scripts (weightedAverage, removeBackgroundnoise, and biasCorrection)
 
 You need to change the path to the tissue probability model of SPM12 for the bias
 field correction method. This needs to be done in ./biasCorrection/preproc_sensemap.m on line 19

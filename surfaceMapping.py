@@ -20,7 +20,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 14. CRUISE cortical reconstruction (right hemisphere)
 15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.95 (06.07.2022)
+Version 0.96 (08.07.2022)
 '''
 
 ############################################################################
@@ -47,9 +47,12 @@ Version 0.95 (06.07.2022)
 # Installation instructions
 # -------------------
 # Things needed to be installed:
-# 1. Working MATLAB installation
-# 2. Working SPM installation
-# 3. MATLAB scripts (weightedAverage and biasCorrection) added to MATLAB path
+# 1. Nighres (https://nighres.readthedocs.io/en/latest/installation.html)
+# 2. antspy (https://github.com/ANTsX/ANTsPy)
+# 3. MATLAB
+# 4. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
+# 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
+# 6. Custom MATLAB scripts (weightedAverage and biasCorrection)
 #
 # You need to change the path to the tissue probability model for the bias
 # field correction method. This needs to be done in

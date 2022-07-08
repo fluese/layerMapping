@@ -1,6 +1,6 @@
 function removeBackgroundnoise(UNI, INV1, INV2, OUT, regularization)
 % Remove background noise of MP2RAGE data using the code of Marques and the
-% method of O'Brien.
+% method of O'Brien (https://github.com/JosePMarques/MP2RAGE-related-scripts).
 MP2RAGE.filenameUNI  = UNI;
 MP2RAGE.filenameINV1 = INV1;
 MP2RAGE.filenameINV2 = INV2;

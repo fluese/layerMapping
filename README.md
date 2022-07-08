@@ -1,5 +1,5 @@
 # Introduction
-This is a pipeline for mapping MRI data on the brain surface.
+This is a pipeline for mapping quantitative T1 values of MP2RAGE data on the brain surface.
 
 The script requires whole brain MP2RAGE data organized according to BIDS (https://bids-specification.readthedocs.io/). You can make use of a high resolution MP2RAGE slab additionally. The slab will be merged into the whole brain volume automatically and used for further processing. 
 

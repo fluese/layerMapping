@@ -40,6 +40,7 @@ Version 0.95 (06.07.2022)
 # 	Switch from SPM's bias correction method to N4 of ANTs for easier use
 # 	Re-write the weightedAverage script for Python
 #	MP2RAGE background cleaning
+# 3. Flag to write all data to disk or final results only
 #
 
 ############################################################################
@@ -121,38 +122,42 @@ sub = 'wtl'
 # the second run must be the higher resolution MP2RAGE slab volume.
 hires = True
 
-# Map specific file onto the surface. Requries absolute path to a NIfTI
-# file. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
-# If the path points to a non-existing file, the according option will
-# be omitted.
-#map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
+# Map specific volume onto the surface. This could be the BOLD of a task
+# fMRI time series (preferably the mean across the time series) or the
+# magnitude data of a QSM volume. This volume will be registered to the
+# T1map of the MP2RAGE volume.
+# Requries absolute path to a NIfTI file. Results will be written to
+# <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
+# non-existing file, the according option will be omitted.
+map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
-map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
+#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
 
 # Transform data in the same space as 'map_data' which is then mapped onto
-# the surface. Could for example be resulting maps of fMRI data. Requries
-# an absolute path to a NIfTI file or a directory containing compressed NIfTI
-# files. The transformation is then applied to all files within the directory.
-# Results will be written to <BIDS_path>/derivatives/sub-<label>/.
+# the surface. Could for example be the statistical maps of SPM from fMRI or QSM
+# data.
+# Requries an absolute path to a NIfTI file or a directory containing compressed
+# NIfTI files. The transformation is then applied to all files within the
+# directory. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
-#transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
+transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
-transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
+#transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
 
 # Flag to overwrite all existing data
 reprocess = False
 
 # Flag to start reprocessing from segmentation onwards
-reprocess_segmentation = True
+reprocess_segmentation = False
 
 # Flag to reprocess left or right hemisphere only
 reprocess_leftHemisphere = False
 reprocess_rightHemisphere = False
 
-# Flag to reprocess additional mapping (and transformation) data
-reprocess_map_data = False
+# Flag to reprocess additional mapping (and transformation) data. This flag is especially useful if you want to map more information onto the surface without re-running the entire pipeline. The basename of the output will be based on the file name of the input data. According to BIDS the prefix 
+reprocess_map_data = True
 
 # Define path from where data is to be copied into "BIDS_path". Could either
 # be to create a backup of the data before processing or transfer to a
@@ -162,7 +167,10 @@ reprocess_map_data = False
 copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
 
 # Define path to atlas. Here, we use custom priors which seem to work well
-# with 7T MP2RAGE data collected in Magdeburg, Germany. 
+# with 7T MP2RAGE data collected in Magdeburg, Germany. Otherwise, please 
+# choose the recent priors that come along with nighres (currently 3.0.9)
+# instead of using the default atlas (currently 3.0.3). You can find that
+# text file in the python package of nighres in the atlas folder.
 atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas', 'brain-atlas-quant-3.0.9_customPriors.txt')
 
 ############################################################################
@@ -1499,7 +1507,7 @@ if map_transform_file_onto_surface:
 			transform_data_rightHemisphere = os.path.join(out_dir, 'sub-' + sub + '_' + transform_data_output + '_rightHemisphere_cropped.nii.gz')
 		else:
 			# Load grey matter image, binarize image, and get information for cropping
-			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-lcrgm.nii.gz'))
+			img = nb.load(os.path.join(out_dir, 'sub-' + sub + filename + '_rightHemisphere_xmask-rcrgm.nii.gz'))
 			tmp = img.get_fdata()
 			tmp[tmp<0] = 0
 			tmp = nb.Nifti1Image(tmp, affine=img.affine, header=img.header)

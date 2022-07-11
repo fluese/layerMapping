@@ -25,7 +25,7 @@ The pipeline consists of following stages:
 ## Installation instructions
 Things needed to be installed:
 1. Nighres (https://nighres.readthedocs.io/en/latest/installation.html)
-2. antspy (https://github.com/ANTsX/ANTsPy)
+2. ANTsPy (https://github.com/ANTsX/ANTsPy)
 3. MATLAB
 4. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
@@ -37,7 +37,7 @@ field correction method. This needs to be done in ./biasCorrection/preproc_sense
 ## Brief instructions for use
 1. For detailed description cf. surfaceMapping.py
 2. Data needs be formated according to BIDS
-3. Paths, files, and flags need to be changed at the beginning of the Python script in the "set parameters" section
+3. Paths, files, and flags need to be changed at the beginning of surfaceMapping.py in the "Set parameters" section
 
 ## Things to do
 1. Get rid of MATLAB dependencies

@@ -283,9 +283,9 @@ Ventricle4		3500.0	2400.0	1.00
 ChoroidPlexusL	2400.0	800.0	1.00
 ChoroidPlexusR	2400.0	800.0	1.00
 Sinuses			2000.0	800.0	1.00
-Cerebellum-GM	2400.0	1400.0	1.00
-Cerebrum-GML	2400.0	1400.0	1.00
-Cerebrum-GMR	2400.0	1400.0	1.00
+Cerebellum-GM	2500.0	1400.0	1.00
+Cerebrum-GML	2500.0	1400.0	1.00
+Cerebrum-GMR	2500.0	1400.0	1.00
 AmygdalaL		2200.0	1200.0	1.00
 AmygdalaR		2200.0	1200.0	1.00
 CaudateL		1700.0	1200.0	1.00
@@ -300,8 +300,8 @@ GlobusPallidusL	1000.0	600.0	1.00
 GlobusPallidusR	1000.0	600.0	1.00
 Brainstem		1300.0	1000.0	1.00
 Cerebellum-WM	1250.0	900.0	1.00
-Cerebrum-WML	1400.0	800.0	1.00
-Cerebrum-WMR	1400.0	800.0	1.00
+Cerebrum-WML	1600.0	800.0	1.00
+Cerebrum-WMR	1600.0	800.0	1.00
  
 Intensity Prior:	Mp2rage7T
 Background		0.00	0.10	1.00

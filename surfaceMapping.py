@@ -8,19 +8,20 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 02. MP2RAGE background cleaning
 03. Resampling to 500 µm (only for hires option)
 04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data (only for hires option)
-06. Weighted image combination of whole brain and slab data (only for hires option)
-07. Atlas-guided tissue classification using MGDM
-08. Region extraction (left hemisphere) 
-09. Crop volume (left hemisphere)
-10. CRUISE cortical reconstruction (left hemisphere)
-11. Extract layers across cortical sheet and map on surface (left hemisphere)
-12. Region extraction (right hemisphere)
-13. Crop volume (right hemisphere)
-14. CRUISE cortical reconstruction (right hemisphere)
-15. Extract layers across cortical sheet and map on surface (right hemisphere)
+05. Registration of whole brain to slab data (optionally)
+06. Regisration of additional to structural data (optionally)
+07. Weighted image combination of whole brain and slab data (optionally)
+08. Atlas-guided tissue classification using MGDM
+09. Region extraction (left hemisphere) 
+10. Crop volume (left hemisphere)
+11. CRUISE cortical reconstruction (left hemisphere)
+12. Extract layers across cortical sheet and map on surface (left hemisphere)
+13. Region extraction (right hemisphere)
+14. Crop volume (right hemisphere)
+15. CRUISE cortical reconstruction (right hemisphere)
+16. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.96 (08.07.2022)
+Version 0.96 (12.07.2022)
 '''
 
 ############################################################################
@@ -52,7 +53,7 @@ Version 0.96 (08.07.2022)
 # 3. MATLAB
 # 4. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
 # 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
-# 6. Custom MATLAB scripts (weightedAverage and biasCorrection)
+# 6. Custom MATLAB scripts (weightedAverage, removeBackgroundnoise and biasCorrection)
 #
 # You need to change the path to the tissue probability model for the bias
 # field correction method. This needs to be done in
@@ -120,7 +121,7 @@ BIDS_path = '/tmp/luesebrink/sample_data/'
 # Define subject following BIDS
 sub = 'wtl'
 
-# Process with an additional high resolution MP2RAGE slab? If 'True' the 
+# Process with an additional high resolution MP2RAGE slab. If 'True' the 
 # first run must be the lower resolution whole brain MP2RAGE volume and
 # the second run must be the higher resolution MP2RAGE slab volume.
 hires = True
@@ -129,11 +130,11 @@ hires = True
 # fMRI time series (preferably the mean across the time series) or the
 # magnitude data of a QSM volume. This volume will be registered to the
 # T1map of the MP2RAGE volume.
-# Requries absolute path to a NIfTI file. Results will be written to
+# Requries an absolute path to a NIfTI file. Results will be written to
 # <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
 # non-existing file, the according option will be omitted.
-map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
-#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
+#map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
+map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
 
 # Transform data in the same space as 'map_data' which is then mapped onto
@@ -144,8 +145,8 @@ map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
 # directory. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
-transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
-#transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
+transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
 
@@ -153,14 +154,18 @@ transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
 reprocess = False
 
 # Flag to start reprocessing from segmentation onwards
-reprocess_segmentation = False
+reprocess_segmentation = True
 
 # Flag to reprocess left or right hemisphere only
 reprocess_leftHemisphere = False
 reprocess_rightHemisphere = False
 
-# Flag to reprocess additional mapping (and transformation) data. This flag is especially useful if you want to map more information onto the surface without re-running the entire pipeline. The basename of the output will be based on the file name of the input data. According to BIDS the prefix 
-reprocess_map_data = True
+# Flag to reprocess additional mapping (and transformation) data. This flag
+# is especially useful if you want to map more information onto the surface
+# without re-running the entire pipeline. The basename of the output will be
+# based on the file name of the input data. According to BIDS the subject
+# label will be added as prefix to all output data.
+reprocess_map_data = False
 
 # Define path from where data is to be copied into "BIDS_path". Could either
 # be to create a backup of the data before processing or transfer to a
@@ -533,7 +538,7 @@ if hires == True:
 	T1map_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
 
 ############################################################################
-# 5.1. Register additional data to (upsampled) T1map
+# 6.1 Register additional data to (upsampled) T1map
 # -------------------
 if reprocess_map_data:
 	reprocess = True
@@ -591,7 +596,7 @@ if map_file_onto_surface:
 map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 
 ############################################################################
-# 5.2. Apply transformation to data to be mapped on the surface
+# 6.2. Apply transformation to data to be mapped on the surface
 # -------------------
 # Define file name for output of transformation.
 if isinstance(transform_data_output, list):
@@ -663,7 +668,7 @@ if reprocess_map_data:
 	reprocess = False
 
 ############################################################################
-# 6. Combination of native and upsampled data
+# 7. Combination of native and upsampled data
 # ----------------
 # Here, we combine the slab and whole brain data by a weighted averaged
 # using a custom MATLAB script. As the slab does not cover the entire
@@ -696,7 +701,7 @@ if hires == True:
 	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected_masked.nii.gz')
 
 #############################################################################
-# 7. MGDM classification
+# 8. MGDM classification
 # ---------------------
 # Next, we use the masked data as input for tissue classification with the
 # MGDM algorithm. MGDM works with a single contrast, but can  be improved
@@ -723,13 +728,14 @@ mgdm_results = nighres.brain.mgdm_segmentation(
                 max_iterations=1000,
                 atlas_file=atlas,
                 normalize_qmaps=False,
+		#adjust_intensity_priors=True,
                 save_data=True,
                 overwrite=reprocess,
                 output_dir=out_dir,
                 file_name='sub-' + sub + filename)
 
 ###########################################################################
-# 8. Region Extraction (left hemisphere)
+# 9. Region Extraction (left hemisphere)
 # ------------------
 # Here, we pull from the MGDM output the needed regions for cortical
 # reconstruction: the GM cortex ('region'), the underlying WM (with filled
@@ -756,7 +762,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
         output_dir=out_dir)
 
 #############################################################################
-# 9. Crop volume to left hemisphere
+# 10. Crop volume to left hemisphere
 # --------------------------------
 # Here, we crop the volume to the left hemisphere based on the output of
 # MGDM. This will reduce the memory demand tremendously as well as
@@ -818,7 +824,7 @@ else:
 	print('Done.')
 
 ############################################################################
-# 9.1. Crop additional data to left hemispehre
+# 10.1. Crop additional data to left hemispehre
 # -------------------
 if reprocess_map_data:
 	reprocess = True
@@ -853,7 +859,7 @@ if map_file_onto_surface:
 		print('Done.')
 
 ############################################################################
-# 9.2. Crop additionally transformed data to left hemispehre
+# 10.2. Crop additionally transformed data to left hemispehre
 # -------------------
 if map_transform_file_onto_surface:
 	print('')
@@ -921,7 +927,7 @@ if reprocess_map_data:
 	reprocess = False
 
 #############################################################################
-# 10. CRUISE cortical reconstruction (left hemisphere)
+# 11. CRUISE cortical reconstruction (left hemisphere)
 # --------------------------------
 # the WM inside mask as a (topologically spherical) starting point to grow a
 # refined GM/WM boundary and CSF/GM boundary
@@ -947,9 +953,9 @@ cruise = nighres.cortex.cruise_cortex_extraction(
                         output_dir=out_dir)
 
 ###########################################################################
-# 11. Extract layers across cortical sheet and map on surface
+# 12. Extract layers across cortical sheet and map on surface
 ###########################################################################
-# 11.1 Volumetric layering for depth measures (left hemisphere)
+# 12.1 Volumetric layering for depth measures (left hemisphere)
 # ---------------------
 # Finally, we use the GM/WM boundary (GWB) and CSF/GM boundary (CGB) from
 # CRUISE to compute cortical depth with a volume-preserving technique.
@@ -970,7 +976,7 @@ layers = nighres.laminar.volumetric_layering(
 layers = nb.load(layers)
 
 ###########################################################################
-# 11.2. Extract middle layer for surface generation and mapping (left hemisphere)
+# 12.2. Extract middle layer for surface generation and mapping (left hemisphere)
 # ---------------------
 # Here, we extract the levelset of the middle layer which will be used to
 # map the information on.
@@ -990,7 +996,7 @@ else:
 	del tmp
 
 ###########################################################################
-# 11.3 Cortical surface generation and inflation of middle layer (left hemisphere)
+# 12.3 Cortical surface generation and inflation of middle layer (left hemisphere)
 # ---------------------
 # Here, we create a surface from the levelset of the middle layer and
 # inflate it afterwards for better visualisation.
@@ -1019,7 +1025,7 @@ inflatedSurface = nighres.surface.surface_inflation(
                         output_dir=out_dir)
 
 ###########################################################################
-# 11.4. Profile sampling of all layers (left hemisphere)
+# 12.4. Profile sampling of all layers (left hemisphere)
 # ---------------------
 # Here, we sample the T1 values of the T1map onto all layers.
 print('')
@@ -1038,7 +1044,7 @@ profile = nighres.laminar.profile_sampling(
 profile = nb.load(profile)
 
 ###########################################################################
-# 11.5. Extract all cortical layers and map on surface (left hemisphere)
+# 12.5. Extract all cortical layers and map on surface (left hemisphere)
 # ---------------------
 # Here, we extract the layers 3 to 18, removing layers close to the white
 # matter and cerebrospinal fluid to avoid partial volume effects.
@@ -1073,7 +1079,7 @@ nighres.surface.surface_mesh_mapping(
 
 
 ###########################################################################
-# 11.6. Extract deep cortical layers and map on surface (left hemisphere)
+# 12.6. Extract deep cortical layers and map on surface (left hemisphere)
 # ---------------------
 # Here, we extract the layers 3 to 6, to cover the "deep" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1105,7 +1111,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_leftHemisphere_extractedLayers-deepLayers.vtk')
 
 ###########################################################################
-# 11.7. Extract inner middle cortical layers and map on surface (left hemisphere)
+# 12.7. Extract inner middle cortical layers and map on surface (left hemisphere)
 # ---------------------
 # Here, we extract the layers 7 to 10, to cover the "inner middle" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1137,7 +1143,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_leftHemisphere_extractedLayers-innerLayers.vtk')
 
 ###########################################################################
-# 11.8. Extract outer middle cortical layers and map on surface (left hemisphere)
+# 12.8. Extract outer middle cortical layers and map on surface (left hemisphere)
 # ---------------------
 # Here, we extract the layers 11 to 14, to cover the "outer middle" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1169,7 +1175,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_leftHemisphere_extractedLayers-outerLayers.vtk')
 
 ###########################################################################
-# 11.9. Extract superficial cortical layers and map on surface (left hemisphere)
+# 12.9. Extract superficial cortical layers and map on surface (left hemisphere)
 # ---------------------
 # Here, we extract the layers 15 to 18, to cover the "superficial" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1201,13 +1207,13 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_leftHemisphere_extractedLayers-superficialLayers.vtk')
 
 ###########################################################################
-# 11.10. Profile sampling of additional data of all layers and mapping it onto
+# 12.10. Profile sampling of additional data of all layers and mapping it onto
 # the surface (left hemisphere)
 # ---------------------
-# Here, we sample the T1 values of the additional data onto all layers. And
-# we extract the layers 1 to 18, removing layers close to the cerebrospinal
-# fluid to avoid partial volume effects. Afterwards the information is
-# mapped on the original and inflated surface of the middle layer.
+# Here, we sample the information of the additional data onto all layers.
+# And we extract the layers 1 to 18, removing layers close to CSF to avoid
+# partial volume effects. Afterwards the information is mapped on the
+# original and inflated surface of the middle layer.
 if reprocess_map_data:
 	reprocess = True
 
@@ -1254,14 +1260,13 @@ if map_file_onto_surface:
 		                file_name='sub-' + sub + '_' + map_data_output + '_leftHemisphere_extractedLayers-allLayers.vtk')
 
 ###########################################################################
-# 11.11. Profile sampling of transformed data of all layers and mapping it onto
+# 12.11. Profile sampling of transformed data of all layers and mapping it onto
 # the surface (left hemisphere)
 # ---------------------
-# Here, we sample the T1 values of the transformed data onto all layers.
-# And we extract the layers 1 to 18, removing layers close to the
-# cerebrospinal fluid to avoid partial volume effects. Afterwards the
-# information is mapped on the original and inflated surface of the middle
-# layer.
+# Here, we sample the information of the transformed data onto all layers.
+# And we extract the layers 1 to 18, removing layers close to CSF to avoid
+# partial volume effects. Afterwards the information is mapped on the original
+# and inflated surface of the middle layer.
 if map_transform_file_onto_surface:
 	print('')
 	print('*****************************************************')
@@ -1349,7 +1354,7 @@ if reprocess_leftHemisphere or reprocess_map_data:
 	reprocess = False
 
 ###########################################################################
-# 12. Region Extraction (right hemisphere)
+# 13. Region Extraction (right hemisphere)
 # ------------------
 # Here, we pull from the MGDM output the needed regions for cortical
 # reconstruction: the GM cortex ('region'), the underlying WM (with filled
@@ -1376,7 +1381,7 @@ cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentat
                                             output_dir=out_dir)
 
 #############################################################################
-# 13. Crop volume to right hemisphere
+# 14. Crop volume to right hemisphere
 # --------------------------------
 # Here, we crop the volume to the right hemisphere based on the output of
 # MGDM. This will reduce the memory demand tremendously as well as
@@ -1432,7 +1437,7 @@ else:
 	print('Done.')
 
 ############################################################################
-# 13.1. Crop additional data to right hemispehre
+# 14.1. Crop additional data to right hemispehre
 # -------------------
 if reprocess_map_data:
 	reprocess = True
@@ -1465,7 +1470,7 @@ if map_file_onto_surface:
 		print('Done.')
 
 ############################################################################
-# 13.2. Crop additionally transformed data to right hemispehre
+# 14.2. Crop additionally transformed data to right hemispehre
 # -------------------
 if map_transform_file_onto_surface:
 	print('')
@@ -1532,7 +1537,7 @@ if reprocess_map_data:
 	reprocess = False
 
 #############################################################################
-# 14. CRUISE cortical reconstruction (right hemisphere)
+# 15. CRUISE cortical reconstruction (right hemisphere)
 # --------------------------------
 # the WM inside mask as a (topologically spherical) starting point to grow a
 # refined GM/WM boundary and CSF/GM boundary
@@ -1552,9 +1557,9 @@ cruise = nighres.cortex.cruise_cortex_extraction(
                         output_dir=out_dir)
 
 ###########################################################################
-# 15. Extract layers across cortical sheet and map on surface (right hemisphere)
+# 16. Extract layers across cortical sheet and map on surface (right hemisphere)
 ###########################################################################
-# 15.1 Volumetric layering for depth measures (right hemisphere)
+# 16.1 Volumetric layering for depth measures (right hemisphere)
 # ---------------------
 # Finally, we use the GM/WM boundary (GWB) and CSF/GM boundary (CGB) from
 # CRUISE to compute cortical depth with a volume-preserving technique.
@@ -1570,7 +1575,7 @@ layers = nighres.laminar.volumetric_layering(
 layers = nb.load(layers)
 
 ###########################################################################
-# 15.2. Extract middle layer for surface generation and mapping (right hemisphere)
+# 16.2. Extract middle layer for surface generation and mapping (right hemisphere)
 # ---------------------
 # Here, we extract the levelset of the middle layer which will be used to
 # map the information on.
@@ -1589,7 +1594,7 @@ else:
 	del tmp
 
 ###########################################################################
-# 15.3 Cortical surface generation and inflation of middle layer (right hemisphere)
+# 16.3 Cortical surface generation and inflation of middle layer (right hemisphere)
 # ---------------------
 # Here, we create a surface from the levelset of the middle layer and
 # inflate it afterwards for better visualisation.
@@ -1612,7 +1617,7 @@ inflatedSurface = nighres.surface.surface_inflation(
                         output_dir=out_dir)
 
 ###########################################################################
-# 15.4. Profile sampling of all layers (right hemisphere)
+# 16.4. Profile sampling of all layers (right hemisphere)
 # ---------------------
 # Here, we sample the T1 values of the T1map onto all layers.
 profile = nighres.laminar.profile_sampling(
@@ -1625,7 +1630,7 @@ profile = nighres.laminar.profile_sampling(
 profile = nb.load(profile)
 
 ###########################################################################
-# 15.5. Extract all cortical layers and map on surface (right hemisphere)
+# 16.5. Extract all cortical layers and map on surface (right hemisphere)
 # ---------------------
 # Here, we extract the layers 3 to 18, removing layers close to the white
 # matter and cerebrospinal fluid to avoid partial volume effects.
@@ -1659,7 +1664,7 @@ nighres.surface.surface_mesh_mapping(
 
 
 ###########################################################################
-# 15.6. Extract deep cortical layers and map on surface (right hemisphere)
+# 16.6. Extract deep cortical layers and map on surface (right hemisphere)
 # ---------------------
 # Here, we extract the layers 3 to 6, to cover the "deep" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1691,7 +1696,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_rightHemisphere_extractedLayers-deepLayers.vtk')
 
 ###########################################################################
-# 15.7. Extract inner middle cortical layers and map on surface (right hemisphere)
+# 16.7. Extract inner middle cortical layers and map on surface (right hemisphere)
 # ---------------------
 # Here, we extract the layers 7 to 10, to cover the "inner middle" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1723,7 +1728,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_rightHemisphere_extractedLayers-innerLayers.vtk')
 
 ###########################################################################
-# 15.8. Extract outer middle cortical layers and map on surface (right hemisphere)
+# 16.8. Extract outer middle cortical layers and map on surface (right hemisphere)
 # ---------------------
 # Here, we extract the layers 11 to 14, to cover the "outer middle" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1755,7 +1760,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_rightHemisphere_extractedLayers-outerLayers.vtk')
 
 ###########################################################################
-# 15.9. Extract superficial cortical layers and map on surface (right hemisphere)
+# 16.9. Extract superficial cortical layers and map on surface (right hemisphere)
 # ---------------------
 # Here, we extract the layers 15 to 18, to cover the "superficial" layers. 
 # Afterwards the information is mapped on the original and inflated
@@ -1787,7 +1792,7 @@ nighres.surface.surface_mesh_mapping(
                         file_name='sub-' + sub + filename + '_rightHemisphere_extractedLayers-superficialLayers.vtk')
 
 ###########################################################################
-# 15.10. Profile sampling of additional data of all layers and mapping it onto
+# 16.10. Profile sampling of additional data of all layers and mapping it onto
 # the surface (right hemisphere)
 # ---------------------
 # Here, we sample the T1 values of the additional data onto all layers. And
@@ -1840,7 +1845,7 @@ if map_file_onto_surface:
 		                file_name='sub-' + sub + '_' + map_data_output + '_rightHemisphere_extractedLayers-allLayers.vtk')
 
 ###########################################################################
-# 15.11. Profile sampling of transformed data of all layers and mapping it onto
+# 16.11. Profile sampling of transformed data of all layers and mapping it onto
 # the surface (right hemisphere)
 # ---------------------
 # Here, we sample the T1 values of the transformed data onto all layers.

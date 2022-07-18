@@ -118,8 +118,8 @@ hires = False
 # Requries an absolute path to a NIfTI file. Results will be written to
 # <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
 # non-existing file, the according option will be omitted.
-map_data = ''
-#map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
+#map_data = ''
+map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
 
@@ -131,8 +131,8 @@ map_data = ''
 # directory. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
-transform_data = ''
-#transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
+#transform_data = ''
+transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
 #transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
@@ -152,7 +152,7 @@ reprocess_rightHemisphere = False
 # without re-running the entire pipeline. The basename of the output will be
 # based on the file name of the input data. According to BIDS the subject
 # label will be added as prefix to all output data.
-reprocess_map_data = False
+reprocess_map_data = True
 
 # Define path from where data is to be copied into "BIDS_path". Could either
 # be to create a backup of the data before processing or transfer to a
@@ -197,7 +197,6 @@ if hires == True:
 	T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
 else:
 	T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
-	INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
 
 	# Should be in in_dir, out_dir is just for testing
 	T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')
@@ -364,6 +363,7 @@ if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resamp
 	print('File exists already. Skipping process.')
 
 	# Update file names
+	T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'biasCorrected.nii.gz')
 	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'biasCorrected_masked.nii.gz')
 	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_' + resampled + 'biasCorrected_masked.nii.gz')
 	T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'masked.nii.gz')
@@ -440,6 +440,7 @@ else:
 	print('Done.')
 	
 	# Update file names
+	T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'biasCorrected.nii.gz')
 	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'biasCorrected_masked.nii.gz')
 	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w_' + resampled + 'biasCorrected_masked.nii.gz')
 	T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map_' + resampled + 'masked.nii.gz')

@@ -5,23 +5,22 @@ Mapping of quantitative T1 values from MP2RAGE data onto surface
 This is a pipeline processing MP2RAGE data by performing the following steps:
 
 01. Setup
-02. MP2RAGE background cleaning
-03. Resampling to 500 µm (only for hires option)
-04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data (optionally)
-06. Regisration of additional to structural data (optionally)
-07. Weighted image combination of whole brain and slab data (optionally)
-08. Atlas-guided tissue classification using MGDM
-09. Region extraction (left hemisphere) 
-10. Crop volume (left hemisphere)
-11. CRUISE cortical reconstruction (left hemisphere)
-12. Extract layers across cortical sheet and map on surface (left hemisphere)
-13. Region extraction (right hemisphere)
-14. Crop volume (right hemisphere)
-15. CRUISE cortical reconstruction (right hemisphere)
-16. Extract layers across cortical sheet and map on surface (right hemisphere)
+02. Resampling to 500 µm (only for hires option)
+03. Imhomogeneity correction and skull stripping
+04. Registration of whole brain to slab data (optionally)
+05. Regisration of additional to structural data (optionally)
+06. Weighted image combination of whole brain and slab data (optionally)
+07. Atlas-guided tissue classification using MGDM
+08. Region extraction (left hemisphere) 
+09. Crop volume (left hemisphere)
+10. CRUISE cortical reconstruction (left hemisphere)
+11. Extract layers across cortical sheet and map on surface (left hemisphere)
+12. Region extraction (right hemisphere)
+13. Crop volume (right hemisphere)
+14. CRUISE cortical reconstruction (right hemisphere)
+15. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.96 (14.07.2022)
+Version 0.961 (18.07.2022)
 '''
 
 ############################################################################
@@ -38,7 +37,6 @@ Version 0.96 (14.07.2022)
 # -------------------
 # 1. Specify files, paths, and flag from outside this script
 # 2. Get rid of MATLAB:
-# 	Switch from SPM's bias correction method to N4 of ANTs for easier use
 # 	Re-write the weightedAverage script for Python
 # 3. Flag to write all data to disk or final results only
 # 4. Add logging feature
@@ -50,15 +48,6 @@ Version 0.96 (14.07.2022)
 # Things needed to be installed:
 # 1. Nighres (https://nighres.readthedocs.io/en/latest/installation.html)
 # 2. antspy (https://github.com/ANTsX/ANTsPy)
-# 3. MATLAB
-# 4. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
-# 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
-# 6. Custom MATLAB scripts (weightedAverage, removeBackgroundnoise and biasCorrection)
-#
-# You need to change the path to the tissue probability model for the bias
-# field correction method. This needs to be done in
-# 
-# ./biasCorrection/preproc_sensemap.m on line 19
 #
 
 ############################################################################

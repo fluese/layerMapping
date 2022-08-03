@@ -116,7 +116,7 @@ from time import localtime, strftime
 BIDS_path = '/tmp/luesebrink/sensemap/'
 
 # Define subject following BIDS
-sub = 'wtl'
+sub = 'aae'
 
 # Process with an additional high resolution MP2RAGE slab. If 'True' the 
 # first run must be the lower resolution whole brain MP2RAGE volume and
@@ -181,7 +181,7 @@ copy_data_from = 'gerd:/media/luesebrink/bmmr_data/data/sensemap/sample_data/'
 # choose the recent priors that come along with nighres (currently 3.0.9)
 # instead of using the default atlas (currently 3.0.3). You can find that
 # text file in the python package of nighres in the atlas folder.
-atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas', 'brain-atlas-quant-3.0.9_customPriors_old.txt')
+atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas', 'brain-atlas-quant-3.0.9_customPriors.txt')
 
 ############################################################################
 # 1.2.1. Display stuff:
@@ -493,7 +493,7 @@ if hires == True:
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
 
-	if os.path.isfile(os.path.join(out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 		# Register whole brain data to high resolution slab
@@ -521,7 +521,7 @@ if hires == True:
 				verbose = True,
 				)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
 
 		warpedImage = ants.apply_transforms(
 				fixed = ants.image_read(T1map_biasCorrected),
@@ -531,7 +531,7 @@ if hires == True:
 				verbose = True,
 				)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz') 
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz') 
 
 		warpedImage = ants.apply_transforms(
 				fixed = ants.image_read(T1w_biasCorrected),
@@ -541,12 +541,12 @@ if hires == True:
 				verbose = True,
 				)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz') 
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz') 
 		
 	# Update file names
-	T1w_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')
-	T1map_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
-	T1map_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
+	T1w_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')
+	T1map_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
+	T1map_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
 
 ############################################################################
 # 6.1 Register additional data to (upsampled) T1map

@@ -21,7 +21,7 @@ This is a pipeline processing MP2RAGE data by performing the following steps:
 15. CRUISE cortical reconstruction (right hemisphere)
 16. Extract layers across cortical sheet and map on surface (right hemisphere)
 
-Version 0.96 (03.09.2022)
+Version 0.97 (14.09.2022)
 '''
 
 ############################################################################
@@ -101,6 +101,7 @@ Version 0.96 (03.09.2022)
 # -------------------
 import nighres
 import os
+import sys
 import ants
 import nibabel as nb
 import glob
@@ -733,17 +734,17 @@ if reprocess_segmentation:
 	reprocess = True
 
 mgdm_results = nighres.brain.mgdm_segmentation(
-                #contrast_image1=T1map_biasCorrected_masked,
-                #contrast_type1='T1map7T',
-                contrast_image2=T1w_biasCorrected_masked,
-                contrast_type2='Mp2rage7T',
+                #contrast_image2=T1w_biasCorrected_masked,
+                #contrast_type2='Mp2rage7T',
 		        contrast_image1=T1map_biasCorrected_masked,
 		        contrast_type1='T1map7T',
-                n_steps=10,
+                n_steps=20,
                 max_iterations=1000,
                 atlas_file=atlas,
                 normalize_qmaps=False,
     		    #adjust_intensity_priors=True,
+				compute_posterior=True,
+    		    posterior_scale=5.0,
                 save_data=True,
                 overwrite=reprocess,
                 output_dir=out_dir,
@@ -765,12 +766,15 @@ print('*****************************************************')
 if reprocess_leftHemisphere:
 	reprocess = True
 
-cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentation'],
+cortex = nighres.brain.extract_brain_region(
+		segmentation=mgdm_results['segmentation'],
     	levelset_boundary=mgdm_results['distance'],
         maximum_membership=mgdm_results['memberships'],
         maximum_label=mgdm_results['labels'],
         atlas_file=atlas,
         extracted_region='left_cerebrum',
+        estimate_tissue_densities=True,
+        partial_volume_distance=1.0,
         save_data=True,
         overwrite=reprocess,
         file_name='sub-' + sub + filename + '_leftHemisphere',
@@ -957,15 +961,17 @@ cruise = nighres.cortex.cruise_cortex_extraction(
                         wm_image=inside_proba,
                         gm_image=region_proba,
                         csf_image=background_proba,
-			vd_image=None,
-                        data_weight=0.8,
-                        regularization_weight=0.2,
-			max_iterations=1000,
-                        normalize_probabilities=True,
+						vd_image=None,
+                        data_weight=0.9,
+                        regularization_weight=0.1,
+						max_iterations=5000,
+                        normalize_probabilities=False,
                         save_data=True,
                         overwrite=reprocess,
                         file_name='sub-' + sub + filename + '_leftHemisphere',
                         output_dir=out_dir)
+
+#sys.exit('Skipping further processing for testing.')
 
 ###########################################################################
 # 12. Extract layers across cortical sheet and map on surface
@@ -1384,16 +1390,19 @@ print('*****************************************************')
 if reprocess_rightHemisphere or reprocess_segmentation:
 	reprocess = True
 
-cortex = nighres.brain.extract_brain_region(segmentation=mgdm_results['segmentation'],
-                                            levelset_boundary=mgdm_results['distance'],
-                                            maximum_membership=mgdm_results['memberships'],
-                                            maximum_label=mgdm_results['labels'],
-			                    atlas_file=atlas,
-                                            extracted_region='right_cerebrum',
-                                            save_data=True,
-                                            overwrite=reprocess,
-                                            file_name='sub-' + sub + filename + '_rightHemisphere',
-                                            output_dir=out_dir)
+cortex = nighres.brain.extract_brain_region(
+		segmentation=mgdm_results['segmentation'],
+    	levelset_boundary=mgdm_results['distance'],
+        maximum_membership=mgdm_results['memberships'],
+        maximum_label=mgdm_results['labels'],
+        atlas_file=atlas,
+        extracted_region='right_cerebrum',
+        estimate_tissue_densities=True,
+        partial_volume_distance=1.0,
+        save_data=True,
+        overwrite=reprocess,
+        file_name='sub-' + sub + filename + '_rightHemisphere',
+        output_dir=out_dir)
 
 #############################################################################
 # 14. Crop volume to right hemisphere
@@ -1561,11 +1570,11 @@ cruise = nighres.cortex.cruise_cortex_extraction(
                         wm_image=inside_proba,
                         gm_image=region_proba,
                         csf_image=background_proba,
-			vd_image=None,
-                        data_weight=0.8,
-                        regularization_weight=0.2,
-			max_iterations=1000,
-                        normalize_probabilities=True,
+						vd_image=None,
+                        data_weight=0.9,
+                        regularization_weight=0.1,
+						max_iterations=5000,
+                        normalize_probabilities=False,
                         save_data=True,
                         overwrite=reprocess,
                         file_name='sub-' + sub + filename + '_rightHemisphere',

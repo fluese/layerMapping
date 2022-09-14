@@ -10,17 +10,18 @@ The pipeline consists of following stages:
 02. MP2RAGE background cleaning
 03. Resampling to 500 µm (only for hires option)
 04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data (only for hires option)
-06. Weighted image combination of full brain and slab data (only for hires option)
-07. Atlas-guided tissue classification using MGDM
-08. Region extraction (left hemisphere) 
-09. Crop volume (left hemisphere)
-10. CRUISE cortical reconstruction (left hemisphere)
-11. Extract layers across cortical sheet and map on surface (left hemisphere)
-12. Region extraction (right hemisphere)
-13. Crop volume (right hemisphere)
-14. CRUISE cortical reconstruction (right hemisphere)
-15. Extract layers across cortical sheet and map on surface (right hemisphere)
+05. Registration of whole brain to slab data (optionally)
+06. Regisration of additional to structural data (optionally)
+07. Weighted image combination of whole brain and slab data (optionally)
+08. Atlas-guided tissue classification using MGDM
+09. Region extraction (left hemisphere) 
+10. Crop volume (left hemisphere)
+11. CRUISE cortical reconstruction (left hemisphere)
+12. Extract layers across cortical sheet and map on surface (left hemisphere)
+13. Region extraction (right hemisphere)
+14. Crop volume (right hemisphere)
+15. CRUISE cortical reconstruction (right hemisphere)
+16. Extract layers across cortical sheet and map on surface (right hemisphere)
 
 ## Installation instructions
 Things needed to be installed:
@@ -46,7 +47,7 @@ field correction method. This needs to be done in ./biasCorrection/preproc_sense
 4. Add logging feature
 
 ## Version
-0.96 (08.07.2022)
+0.97 (14.09.2022)
 
 ## Contact information
 Dr. Falk Luesebrink

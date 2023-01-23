@@ -48,6 +48,9 @@ field correction method. This needs to be done in ./biasCorrection/preproc_sense
 2. Flag to write all data to disk or final results only
 3. Add logging feature
 
+## Further notes
+The versions of the script "withoutMatlab" and "withFreeSurfer" are work in progress.
+
 ## Version
 0.99 (20.01.2023)
 

@@ -8,11 +8,11 @@ Furthermore, you can specify volumes which will be mapped on the surface additio
 The pipeline consists of following stages:
 01. Setup
 02. MP2RAGE background cleaning
-03. Resampling to 500 µm (only for hires option)
+03. Resampling to 500 µm (hires pipeline only)
 04. Imhomogeneity correction and skull stripping
-05. Registration of whole brain to slab data (optionally)
-06. Regisration of additional to structural data (optionally)
-07. Weighted image combination of whole brain and slab data (optionally)
+05. Registration of whole brain to slab data (hires pipeline only)
+06. Regisration of additional to structural data (optionally -> should moved to the end for better overview)
+07. Weighted image combination of whole brain and slab data (hires pipeline only)
 08. Atlas-guided tissue classification using MGDM
 09. Region extraction (left hemisphere) 
 10. Crop volume (left hemisphere)
@@ -22,6 +22,9 @@ The pipeline consists of following stages:
 14. Crop volume (right hemisphere)
 15. CRUISE cortical reconstruction (right hemisphere)
 16. Extract layers across cortical sheet and map on surface (right hemisphere)
+
+## Acknowledgement
+This work was supported by CRC 1436 "Neural Resources of Cognition" of the German Research Foundation (DFG) under project ID 425899996.
 
 ## Installation instructions
 Things needed to be installed:
@@ -42,12 +45,11 @@ field correction method. This needs to be done in ./biasCorrection/preproc_sense
 
 ## Things to do
 1. Get rid of MATLAB dependencies
-2. Specify files, paths, and flags from outside the script
-3. Flag to write all data to disk or final results only
-4. Add logging feature
+2. Flag to write all data to disk or final results only
+3. Add logging feature
 
 ## Version
-0.97 (14.09.2022)
+0.99 (20.01.2023)
 
 ## Contact information
 Dr. Falk Luesebrink

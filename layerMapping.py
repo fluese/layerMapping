@@ -34,6 +34,12 @@ Version 0.99 (20.01.2023)
 #
 
 ############################################################################
+# Acknowledgement
+# -------------------
+# This work was supported by CRC 1436 "Neural Resources of Cognition" of
+# the German Research Foundation (DFG) under project ID 425899996.
+
+############################################################################
 # THINGS TO DO
 # -------------------
 # 1. Get rid of MATLAB:

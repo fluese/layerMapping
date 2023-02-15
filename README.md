@@ -58,6 +58,7 @@ In case 1 the subject with the ID 'aaa' will be processed. The according data is
 Furthermore, you can specify a single volume which will be mapped on the surface additionally. This is meant for mapping another contrast  on the  surface, e.g. QSM data or fMRI results. The resulting transformation can be applied either to another volume or to all compressed NIfTI files of an entire directory. Currently, this can be done in the script only.
 
 To enable logging of the output, one can send the screen output into a file. This can be done, e.g. by using following command:
+
 python3 -u layerMapping.py aaa |& tee -a /tmp/luesebrink/sensemap/derivatives/sub-aaa/layerMapping.log
 
 A few flags have been set up which allow to reprocess data at various stages of the pipeline (e.g. entirely, from the segmentation onwards, mapping of additional data, or per hemisphere). In case you want to map multiple files onto the surface additionally, this is especially useful as you don't have to process all other data again. Simply specify a file under 'map_data' that shall be mapped onto the surface and change the 'reprocess_map_data' flag to True.

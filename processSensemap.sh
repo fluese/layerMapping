@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # This is a script to run the surface mapping pipeline on an entire
 # BIDS structured directory or to process a single BIDS structured
 # dataset.
@@ -57,28 +56,7 @@ if [[ -d ${path} ]] && [[ "$#" -eq 1 ]]; then
 			echo ""
 		else
 			mkdir -p ${path}/derivatives/sub-${sub}/
-			python3 -u /data/tu_luesebrink/software/surfaceMapping/surfaceMapping.py ${sub} $path} |& tee ${path}/derivatives/sub-${sub}/surfaceMapping_${sub}.log
-			
-			# Copy to external hard drive if data is processed successfully.
-			if [[ -f ${path}/derivatives/sub-${sub}/processed_succesfully ]]; then
-				echo ""
-				echo "*****************************************************"
-				echo "* Copying data to backup solution."
-				echo "*****************************************************"
-				if [[ -f ${path}/derivatives/sub-${sub}/data_copied ]]; then
-					echo "Backup of data already done. Skipping copying again."
-					echo "If you want to copy the data again automatically,"
-					echo "please delete:"
-					echo ""
-					echo "${path}/derivatives/sub-${sub}/data_copied"
-					echo ""
-					echo "and re-start the script." 
-					echo ""
-				else
-					scp -r ${path}/derivatives/sub-${sub} "rubikon:/media/luesebrink/One\ Touch/sensemap/derivatives/"
-					touch ${path}/derivatives/sub-${sub}/data_copied
-				fi
-			fi
+			python3 -u layerMapping.py ${sub} $path} |& tee ${path}/derivatives/sub-${sub}/layerMapping_${sub}.log
 		fi
 	done
 elif [[ -d ${path} ]] && [[ "$#" -eq 2 ]]; then
@@ -96,30 +74,9 @@ elif [[ -d ${path} ]] && [[ "$#" -eq 2 ]]; then
 		echo "and re-start the process."
 		echo "********************** WARNING **********************"
 		echo ""
-    else
-    	mkdir -p ${path}/derivatives/sub-${sub}/
-        python3 -u /data/tu_luesebrink/software/surfaceMapping/surfaceMapping.py ${sub} ${path} |& tee ${path}/derivatives/sub-${sub}/surfaceMapping_${sub}.log
-       
-		# Copy to external hard drive if data is processed successfully.
-		if [[ -f ${path}/derivatives/sub-${sub}/processed_succesfully ]]; then
-			echo ""
-			echo "*****************************************************"
-			echo "* Copying data to backup solution."
-			echo "*****************************************************"
-			if [[ -f ${path}/derivatives/sub-${sub}/data_copied ]]; then
-				echo "Backup of data already done. Skipping copying again."
-				echo "If you want to copy the data again automatically,"
-				echo "please delete:"
-				echo ""
-				echo "${path}/derivatives/sub-${sub}/data_copied"
-				echo ""
-				echo "and re-start the script." 
-				echo ""
-			else
-				scp -r ${path}/derivatives/sub-${sub} "rubikon:/media/luesebrink/One\ Touch/sensemap/derivatives/"
-				touch ${path}/derivatives/sub-${sub}/data_copied
-			fi
-		fi
+	else
+    		mkdir -p ${path}/derivatives/sub-${sub}/
+        	python3 -u layerMapping.py ${sub} ${path} |& tee ${path}/derivatives/sub-${sub}/layerMapping_${sub}.log
 	fi
 else
 	echo "Something went wrong?"

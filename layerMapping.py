@@ -163,8 +163,8 @@ sub = ''
 # the path during processing. Otherwise, the second input after the script
 # is meant to specify the BIDS_path. In a future release this will be 
 # changed for easier handling.
-#BIDS_path = ''
-BIDS_path = '/tmp/luesebrink/sensemap/'
+BIDS_path = ''
+#BIDS_path = '/tmp/luesebrink/sensemap/'
 
 # Process with an additional high resolution MP2RAGE slab. If 'True' the 
 # first run must be the lower resolution whole brain MP2RAGE volume and

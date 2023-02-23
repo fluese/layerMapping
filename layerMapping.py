@@ -7,20 +7,19 @@ This is a pipeline processing BIDS formatted MP2RAGE data by performing the foll
 01. Setup
 02. MP2RAGE background cleaning
 03. Resampling to 500 µm (hires pipeline only)
-04. Imhomogeneity correction
-05. Skull stripping
-06. Registration of whole brain to slab data (hires pipeline only)
-07. Weighted image combination of whole brain and slab data (hires pipeline only)
-08. FreeSurfer
-09. Atlas-guided tissue classification using MGDM
-10. Extract hemisphere
-11. Crop volume to hemisphere
-12. CRUISE cortical reconstruction
-13. Extract layers across cortical sheet and map on surface
-14. Process addtional data (if data is specified)
-15. Process transform data (if data is specified)
+04. Skull stripping
+05. Registration of whole brain to slab data (hires pipeline only)
+06. Weighted image combination of whole brain and slab data (hires pipeline only)
+07. FreeSurfer
+08. Atlas-guided tissue classification using MGDM
+09. Extract hemisphere
+10. Crop volume to hemisphere
+11. CRUISE cortical reconstruction
+12. Extract layers across cortical sheet and map on surface
+13. Process addtional data (if data is specified)
+14. Process transform data (if data is specified)
 
-Version 1 (<3 14.02.2023 <3) 
+Version 1.1. (23.02.2023) 
 '''
 
 ############################################################################
@@ -42,11 +41,9 @@ Version 1 (<3 14.02.2023 <3)
 # THINGS TO DO
 # -------------------
 # 0. Largest Component for white semgentation?
-# 1. Change os.system to subprocess.run for MATLAB invocations
-# 2. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
+# 1. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
 # 2. Get rid of MATLAB:
 #	   * MP2RAGE background cleaning [Needs to be re-written]
-# 	   * SPM's bias correction method [Probably by using FreeSurfer results]
 #	   * Combination of high resolution slab and low resolution whole brain data [Note: Function is included at the end. However, MATLAB function provides better (?) results. At least using the Python implementation CRUISE produced more error. Maybe due to using the FreeSurfer segmentation this is not an issue anymore]
 # 3. Flag to write all data to disk or final results only
 # 4. Add logging feature
@@ -60,14 +57,9 @@ Version 1 (<3 14.02.2023 <3)
 # 2. antspy (tested with v0.3.2: https://github.com/ANTsX/ANTsPy)
 # 3. FreeSurfer (tested with v7.3.2: https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall)
 # 4. MATLAB (tested with R2022a)
-# 5. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
-# 6. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
-# 7. Custom MATLAB scripts (weightedAverage, removeBackgroundnoise and biasCorrection)
-#
-# You need to change the path to the tissue probability model for the bias
-# field correction method. This needs to be done in
-# 
-# ./biasCorrection/preproc_sensemap.m on line 19
+# 5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
+# 6. Tools for NIfTI and Analyze image format (https://www.mathworks.com/matlabcentral/fileexchange/8797-tools-for-nifti-and-analyze-image)
+# 7. Custom MATLAB scripts (weightedAverage and removeBackgroundnoise)
 #
 
 ############################################################################
@@ -117,7 +109,7 @@ Version 1 (<3 14.02.2023 <3)
 #
 # To enable logging of the output, one can send the screen output into a
 # file. This can be done, e.g. by using following command:
-# python3 -u layerMapping.py aaa |& tee -a /tmp/luesebrink/sensemap/derivatives/sub-aaa/layerMapping.log
+# python3 -u layerMapping.py aaa |& tee -a /tmp/luesebrink/derivatives/sub-aaa/layerMapping.log
 #
 # A few flags have been set up which allow to reprocess data at various
 # stages of the pipeline (e.g. entirely, from the segmentation onwards,
@@ -156,7 +148,7 @@ from time import localtime, strftime
 # left empty, the user will be asked to specify the subject's ID during
 # processing. Otherwise, the first input after the script is meant to
 # specify the subject ID.
-# sub = 'wtl'
+# sub = 'aaa'
 sub = ''
 
 # Define BIDS path here. If left empty, the user will be asked to specify
@@ -179,9 +171,9 @@ hires = True
 # <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
 # non-existing file, the according option will be omitted.
 map_data = ''
-#map_data = BIDS_path + 'sub-wtl/anat/sub-wtl_part-mag_SWI.nii.gz'
-#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-rest_bold_mean.nii.gz'
-#map_data = BIDS_path + 'derivatives/sub-wtl/func/sub-wtl_task-pRF_bold_mean.nii.gz'
+#map_data = BIDS_path + 'sub-aaa/anat/sub-aaa_part-mag_SWI.nii.gz'
+#map_data = BIDS_path + 'derivatives/sub-aaa/func/sub-aaa_task-rest_bold_mean.nii.gz'
+#map_data = BIDS_path + 'derivatives/sub-aaa/func/sub-aaa_task-pRF_bold_mean.nii.gz'
 
 # Transform data in the same space as 'map_data' which is then mapped onto
 # the surface. Could for example be the statistical maps of SPM from fMRI or the
@@ -192,10 +184,10 @@ map_data = ''
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
 transform_data = ''
-#transform_data = BIDS_path + 'derivatives/sub-wtl/QSM/sub-wtl_Chimap.nii.gz'
-#transform_data = BIDS_path + 'derivatives/sub-wtl/resting_state/sub-wtl_task-rest_bold_ecm_rlc.nii.gz'
-#transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_statisticalMaps/'
-#transform_data = BIDS_path + 'derivatives/sub-wtl/pRF_model/'
+#transform_data = BIDS_path + 'derivatives/sub-aaa/QSM/sub-aaa_Chimap.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-aaa/resting_state/sub-aaa_task-rest_bold_ecm_rlc.nii.gz'
+#transform_data = BIDS_path + 'derivatives/sub-aaa/pRF_statisticalMaps/'
+#transform_data = BIDS_path + 'derivatives/sub-aaa/pRF_model/'
 
 # Choose interpolation method for mapping of additional data. Choice of
 # interpolator can be 'linear', 'nearstNeighbor, 'bSpline', 'genericLabel'.
@@ -303,7 +295,7 @@ if os.path.isdir(copy_data_from):
 	else:
 		subprocess.run(["scp", "-r", copy_data_from, " ", BIDS_path])
 else:
-	print('No path found to copy data from found. Continuing without copying data!')
+	print('WARNING: No path found to copy data from found. Continuing without copying data!')
 
 # Check if data exists.
 print('')
@@ -315,13 +307,29 @@ if os.path.isfile(INV1) and os.path.isfile(INV2) and os.path.isfile(T1map) and o
 	print('Files exists. Good!')
 else:
 	print('No files found. Exiting!')
+	print('')
+	print('INFO: Be sure that your input data are structured according to BIDS.')
+	print('      It should be organized like this:')
+	print('')
+	print('		 ./BIDS_path/')
+	print(' 	 └── /sub-' + sub + '/')
+	print('		 	  └── anat')
+    print('			      ├── sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
+	print('			      ├── sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
+	print('			      ├── sub-' + sub + '_run-01_T1map.nii.gz')
+	print('			      ├── sub-' + sub + '_run-01_UNIT1.nii.gz')
+	print('			      ├── sub-' + sub + '_run-02_inv-1_MP2RAGE.nii.gz')
+	print('			      ├── sub-' + sub + '_run-02_inv-2_MP2RAGE.nii.gz')
+	print('			      ├── sub-' + sub + '_run-02_T1map.nii.gz')
+	print('			      └── sub-' + sub + '_run-02_UNIT1.nii.gz')
+	print('')
 	exit()
 
 if hires == True:
 	if os.path.isfile(INV1_slab) and os.path.isfile(INV2_slab) and os.path.isfile(T1map_slab) and os.path.isfile(UNI_slab):
 		print('High resolution files exists. Good!')
 	else:
-		print('No high resolution files found. Continuing without hires option!')
+		print('WARNING: No high resolution files found. Continuing without hires option!')
 		hires = False
 
 # Check if file for mapping of additional data exists.
@@ -346,12 +354,12 @@ if os.path.isfile(map_data):
 		map_data_output = map_data_output[8:]
 else:
 	map_file_onto_surface = False
-	print('Could not find file for surface mapping. Omitting flag!')
+	print('WARNING: Could not find file for surface mapping. Omitting flag!')
 
 # Check if file for applying the transformation of the additional data exists.
 if os.path.isfile(transform_data) == False and os.path.isdir(transform_data) == False:
 	map_transform_file_onto_surface = False
-	print('Could not find file or path for applying transform of additional data. Omitting flag!')
+	print('WARNING: Could not find file or path for applying transform of additional data. Omitting flag!')
 elif os.path.isdir(transform_data) or os.path.isfile(transform_data):
 	map_transform_file_onto_surface = True
 	print('File or path found for applying transform of additional data. Good!')
@@ -416,9 +424,8 @@ if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')) an
 else:
 	reg = str(10)
 	output = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')
-	#os.system('matlab -nosplash -nodisplay -r \"removeBackgroundnoise(\'' + UNI + '\', \'' + INV1 + '\', \'' + INV2 + '\', \'' + output + '\', ' + reg + '); exit;\"')
-	os.system('matlab -nosplash -nodisplay -r \"removeBackgroundnoise(\'' + UNI + '\', \'' + INV1 + '\', \'' + INV2 + '\', \'' + output + '\', ' + reg + '); exit;\"')
-
+	cmd = "removeBackgroundnoise(\'" + UNI + "\', \'" + INV1 + "', \'" + INV2 + "\', \'" + output + "\'," + reg + "); exit;"
+	subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 # Check for high resolution slab data and start MATLAB to conduct background cleaning.
 if hires == True:
@@ -426,8 +433,9 @@ if hires == True:
 		print('File exists already. Skipping process.')
 	else:
 		output = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
-		os.system('matlab -nosplash -nodisplay -r \"removeBackgroundnoise(\'' + UNI_slab + '\', \'' + INV1_slab + '\', \'' + INV2_slab + '\', \'' + output + '\', ' + reg + '); exit;\"')
-
+		cmd = "removeBackgroundnoise(\'" + UNI_slab + "\', \'" + INV1_slab + "', \'" + INV2_slab + "\', \'" + output + "\'," + reg + "); exit;"
+		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
+		
 # Update file names
 T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w.nii.gz')
 T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
@@ -468,38 +476,7 @@ else:
 	T1map = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
 
 ############################################################################
-# 4. Inhomogeneity correction 
-# ----------------
-# Here, we perform inhomogeneity correction using SPM's segment routine.
-print('')
-print('*****************************************************')
-print('* Inhomogeneity correction of whole brain data')
-print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
-print('*****************************************************')
-if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_biasCorrected.nii.gz')) and reprocess != True:
-	print('File exists already. Skipping process.')
-else:
-	os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1w + '\'); exit;\"')
-	os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1map + '\'); exit;\"')
-
-if hires == True:
-	print('')
-	print('*****************************************************')
-	print('* Inhomogeneity correction of slab data')
-	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
-	print('*****************************************************')
-	# Copy data and update file name
-	subprocess.run(["cp", T1map_slab, os.path.join(out_dir, "sub-" + sub + "_run-02_T1map.nii.gz")])
-	T1map_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
-
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected.nii.gz')) and reprocess != True:
-		print('File exists already. Skipping process.')
-	else:
-		os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1w_slab + '\'); exit;\"')
-		os.system('matlab -nosplash -nodisplay -r \"preproc_sensemap(\'' + T1map_slab + '\'); exit;\"')
-
-############################################################################
-# 5. Skull stripping
+# 4. Skull stripping
 # ----------------
 # Here, we perform skull stripping of T1w data using FreeSurfer's
 # mri_synthstrip routine. Afterwards, we apply the mask to the T1map
@@ -509,14 +486,14 @@ print('*****************************************************')
 print('* Skull stripping of whole brain data')
 print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 print('*****************************************************')
-T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_biasCorrected.nii.gz')
-T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_biasCorrected_masked.nii.gz')
+T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '.nii.gz')
+T1w_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_masked.nii.gz')
 mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_brainmask.nii.gz')
 
-if os.path.isfile(T1w_biasCorrected_masked) and reprocess != True:
+if os.path.isfile(T1w_masked) and reprocess != True:
 	print('File exists already. Skipping process.')
 else:
-	subprocess.run(["mri_synthstrip", "-i", T1w_biasCorrected, "-o", T1w_biasCorrected_masked, "-m", mask, "-b", "-1"])
+	subprocess.run(["mri_synthstrip", "-i", T1w, "-o", T1w_masked, "-m", mask, "-b", "-1"])
 
 if hires == True:
 	print('')
@@ -524,14 +501,14 @@ if hires == True:
 	print('* Skull stripping of high resolution slab data')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
-	T1w_slab_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected.nii.gz')
-	T1w_slab_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected_masked.nii.gz')
+	T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
+	T1w_slab_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_masked.nii.gz')
 	mask_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_brainmask.nii.gz')
 	
-	if os.path.isfile(T1w_slab_biasCorrected_masked) and reprocess != True:
+	if os.path.isfile(T1w_slab_masked) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
-		subprocess.run(["mri_synthstrip", "-i", T1w_slab_biasCorrected, "-o", T1w_slab_biasCorrected_masked, "-m", mask, "-b", "-1"])
+		subprocess.run(["mri_synthstrip", "-i", T1w_slab, "-o", T1w_slab_masked, "-m", mask_slab, "-b", "-1"])
 
 print('')
 print('*****************************************************')
@@ -539,19 +516,19 @@ print('* Masking T1map of whole brain data')
 print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 print('*****************************************************')
 # Update file names	
-T1w_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_biasCorrected.nii.gz')
-T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_biasCorrected_masked.nii.gz')
-T1map_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_biasCorrected.nii.gz')
-T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_biasCorrected_masked.nii.gz')
+T1w = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '.nii.gz')
+T1w_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_masked.nii.gz')
+T1map = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '.nii.gz')
+T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_masked.nii.gz')
 mask = os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_brainmask.nii.gz')
 
 # Check if volume exists
-if os.path.isfile(T1map_biasCorrected_masked) and reprocess != True:
+if os.path.isfile(T1map_masked) and reprocess != True:
 	print('File exists already. Skipping process.')
 else:
 # Mask image otherwise
 	maskedImage = ants.mask_image(ants.image_read(T1map), ants.image_read(mask))
-	ants.image_write(maskedImage, os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_biasCorrected_masked.nii.gz'))
+	ants.image_write(maskedImage, os.path.join(out_dir, 'sub-' + sub + '_run-01_T1map' + resampled + '_masked.nii.gz'))
 	print('Done.')
 
 if hires == True:
@@ -561,23 +538,24 @@ if hires == True:
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
 	# Update file names	
-	T1w_slab_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected.nii.gz')
-	T1w_slab_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected_masked.nii.gz')
-	T1map_slab_biasCorrected = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected.nii.gz')
-	T1map_slab_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_masked.nii.gz')
+	T1w_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
+	T1w_slab_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_masked.nii.gz')
+	T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
+	T1map_slab_masked = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_masked.nii.gz')
 	mask_slab = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_brainmask.nii.gz')
 
 	# Check if volume exists
-	if os.path.isfile(T1map_slab_biasCorrected_masked) and reprocess != True:
+	if os.path.isfile(T1map_slab_masked) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 	# Mask image otherwise
-		maskedImage = ants.mask_image(ants.image_read(T1map_slab_biasCorrected), ants.image_read(mask_slab))
-		ants.image_write(maskedImage, os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_masked.nii.gz'))
+		subprocess.run(["cp", os.path.join(in_dir, "sub-" + sub + "_run-02_T1map.nii.gz"), os.path.join(out_dir, "sub-" + sub + "_run-02_T1map.nii.gz")])
+		maskedImage = ants.mask_image(ants.image_read(T1map_slab), ants.image_read(mask_slab))
+		ants.image_write(maskedImage, os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_masked.nii.gz'))
 		print('Done.')
 
 ############################################################################
-# 6. Register data to upsampled 500 µm data
+# 5. Register data to upsampled 500 µm data
 # -------------------
 # Here, we register the T1map whole brain data to the high resolution
 # slab using ANTs with an adapted script. This gives better registration
@@ -597,19 +575,19 @@ if hires == True:
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
 
-	if os.path.isfile(os.path.join(out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir + 'sub-' + sub + '_run-02_T1w_registered_to_sub-' + sub + '_run-01_T1w_resampled_masked.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 		# Register whole brain data to high resolution slab
 		registeredImage = ants.registration(
-			fixed = ants.image_read(T1map_slab_biasCorrected_masked),
-			moving = ants.image_read(T1map_biasCorrected_masked),
+			fixed = ants.image_read(T1map_slab_masked),
+			moving = ants.image_read(T1map_masked),
 			type_of_transform = 'SyNRA',
 			syn_metric = 'CC',
 			syn_sampling = 4,
 			reg_iterations = (200, 100, 30 ,15),
 			verbose = True,
-			#outprefix = out_dir + 'sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked_registered_to_sub-' + sub + '_run-02_T1map_biasCorrected_masked_',
+			#outprefix = out_dir + 'sub-' + sub + '_run-01_T1map_resampled_masked_registered_to_sub-' + sub + '_run-02_T1map_masked_',
 			)
 			
 		print('')
@@ -619,53 +597,42 @@ if hires == True:
 		print('*****************************************************')
 		# Apply transformation to several files.
 		warpedImage = ants.apply_transforms(
-			fixed = ants.image_read(T1map_biasCorrected),
+			fixed = ants.image_read(T1map),
 			moving = ants.image_read(T1map_slab),
 	        transformlist = registeredImage['invtransforms'],
 			interpolator = 'bSpline',
 			verbose = True,
 			)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_masked.nii.gz')
 
 		warpedImage = ants.apply_transforms(
-			fixed = ants.image_read(T1map_biasCorrected),
-			moving = ants.image_read(T1map_slab_biasCorrected),
+			fixed = ants.image_read(T1w),
+			moving = ants.image_read(T1w_slab),
 	        transformlist = registeredImage['invtransforms'],
 			interpolator = 'bSpline',
 			verbose = True,
 			)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz') 
-
-		warpedImage = ants.apply_transforms(
-			fixed = ants.image_read(T1w_biasCorrected),
-			moving = ants.image_read(T1w_slab_biasCorrected),
-	        transformlist = registeredImage['invtransforms'],
-			interpolator = 'bSpline',
-			verbose = True,
-			)
-
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz') 
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1w_registered_to_sub-' + sub + '_run-01_T1w_resampled_masked.nii.gz') 
 		
 		warpedImage = ants.apply_transforms(
-			fixed = ants.image_read(T1map_biasCorrected),
+			fixed = ants.image_read(T1map),
 			moving = ants.image_read(mask_slab),
 	        transformlist = registeredImage['invtransforms'],
 			interpolator = 'bSpline',
 			verbose = True,
 			)
 
-		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz') 
+		ants.image_write(warpedImage, out_dir + 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_masked.nii.gz') 
 		
 	# Update file names
-	T1w_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_biasCorrected_registered_to_sub-' + sub + '_run-01_T1w_resampled_biasCorrected_masked.nii.gz')
-	T1map_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
-	T1map_slab_biasCorrected_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_biasCorrected_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz')
-	mask_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz') 
+	T1w_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_registered_to_sub-' + sub + '_run-01_T1w_resampled_masked.nii.gz')
+	T1map_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_registered_to_sub-' + sub + '_run-01_T1map_resampled_masked.nii.gz')
+	mask_slab_reg = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_masked.nii.gz') 
 
 ############################################################################
-# 7. Combination of native and upsampled data
+# 6. Combination of native and upsampled data
 # ----------------
 # Here, we combine the slab and whole brain data by a weighted averaged
 # using a custom MATLAB script. As the slab does not cover the entire
@@ -673,50 +640,77 @@ if hires == True:
 # Therefore, weighted averaging is applied in z-direction (superior to
 # inferior) in the last third number of slices gradually increasing 
 # the weighting with distance.
+#
+# For intensity scaling a white matter mask is used. This is generated
+# using mri_synthseg as a rather quick solution. The mask is morphologically
+# eroded to remove voxels at the border.
+
 if hires == True:
+	print('')
+	print('*****************************************************')
+	print('* Segment image data and extract white matter')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
+	print('*****************************************************')
+	if os.path.isfile(os.path.join(out_dir, T1w[:-7] + '_segmentation_extracted_white_matter.nii.gz')) and reprocess != True:
+		print('File exists already. Skipping process.')
+	else:
+		# Segment data quickly to generate white matter segmentation.
+		subprocess.run(["mri_synthseg", "--i", T1w, "--o", os.path.join(out_dir, T1w[:-7] + '_segmentation.nii.gz')])
+		subprocess.run(["mri_synthseg", "--i", T1map, "--o", os.path.join(out_dir, T1map[:-7] + '_segmentation.nii.gz')])
+		
+		# It seems one has to resample the data to the native resolution again... Should be fine though...
+		subprocess.run(["mri_convert", "-rt", "nearest", "-odt", "int", "--no_scale", "1", "-rl", T1w, "-i", os.path.join(out_dir, T1w[:-7] + '_segmentation.nii.gz'), "-o", os.path.join(out_dir, T1w[:-7] + '_segmentation.nii.gz')])
+		subprocess.run(["mri_convert", "-rt", "nearest", "-odt", "int", "--no_scale", "1", "-rl", T1map, "-i", os.path.join(out_dir, T1map[:-7] + '_segmentation.nii.gz'), "-o", os.path.join(out_dir, T1map[:-7] + '_segmentation.nii.gz')])
+
+		# Extract white matter segmentation to scale intensities between slab and whole brain data globally.
+		subprocess.run(["mri_binarize", "--match", "2", "41", "4", "43", "5", "44", "10", "49", "11", "50", "12", "51", "13", "52", "14", "15", "17", "53", "18", "54", "26", "58", "28", "60",  "31", "63", "77", "--i", os.path.join(out_dir, T1w[:-7] + '_segmentation.nii.gz'), "--o", os.path.join(out_dir, T1w[:-7] + '_segmentation_extracted_white_matter.nii.gz')])
+		subprocess.run(["mri_binarize", "--match", "2", "41", "4", "43", "5", "44", "10", "49", "11", "50", "12", "51", "13", "52", "14", "15", "17", "53", "18", "54", "26", "58", "28", "60",  "31", "63", "77", "--i", os.path.join(out_dir, T1map[:-7] + '_segmentation.nii.gz'), "--o", os.path.join(out_dir, T1map[:-7] + '_segmentation_extracted_white_matter.nii.gz')])
+
 	print('')
 	print('*****************************************************')
 	print('* Combination of native and upsampled data')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
 
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
 		# Update file names
-		T1w_WM = os.path.join(out_dir, 'c2sub-' + sub + '_run-01_T1w_resampled.nii.gz')
-		T1map_WM = os.path.join(out_dir, 'c2sub-' + sub + '_run-01_T1map_resampled.nii.gz')
+		T1w_WM = os.path.join(out_dir, T1w[:-7] + '_segmentation_extracted_white_matter.nii.gz')
+		T1map_WM = os.path.join(out_dir, T1map[:-7] + '_segmentation_extracted_white_matter.nii.gz')
 
 		# Combine data using custom MATLAB script
-		os.system('matlab -nosplash -nodisplay -r \"weightedAverage(\'' + T1w_biasCorrected + '\', \'' + T1w_slab_biasCorrected_reg + '\', \'' + T1w_WM + '\', \'' + mask + '\', \'' + out_dir + 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected.nii.gz' + '\'); exit;\"')
-		os.system('matlab -nosplash -nodisplay -r \"weightedAverage(\'' + T1map + '\', \'' + T1map_slab_reg + '\', \'' + T1map_WM + '\', \'' + mask + '\', \'' + out_dir + 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz' + '\'); exit;\"')
-		
-		os.system('matlab -nosplash -nodisplay -r \"weightedAverage(\'' + T1map_biasCorrected + '\', \'' + T1map_slab_biasCorrected_reg + '\', \'' + T1map_WM + '\', \'' + mask + '\', \'' + out_dir + 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected.nii.gz' + '\'); exit;\"')
+		output = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w.nii.gz')
+		cmd = "weightedAverage(\'" + T1w + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
+		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
+
+		output = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz')
+		cmd = "weightedAverage(\'" + T1w + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
+		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 	# Update file names
-	T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected_masked.nii.gz')
+	T1w = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w.nii.gz')
 	T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz')
-	T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected_masked.nii.gz')
 
 ###########################################################################
-# 8.1. Run FreeSurfer to produce segmentation
-# 	   [Could be exchanged by mri_synthseg potentially, less accurate, but much faster]
-#	   [If the entire FreeSurfer pipeline is run, one could make use of more results,
-#		e.g. bias field correction and white matter segmentation to get rid of MATLAB
-#		dependencies].
+# 7.1. Run FreeSurfer to produce segmentation
 # ------------------
 # Here, we run FreeSurfer in order to produce an accurate voxel-base 
-# segmentation of the cortex. This is a bit overkill, but there is no other
-# working solution so far. In order to change the segmentation algorithm
-# one needs to change the command in line 998.
+# segmentation of the cortex.
+#
+# Note: In case dura mater is falsely included in the gray matter
+# segmentation, it needs to be removed manually and FreeSurfer needs to
+# be re-run. For this, you should check out the troubleshooting guides
+# of FreeSurfer directly.
 print('')
 print('*****************************************************')
 print('* Process T1w data with FreeSurfer')
 print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 print('*****************************************************')
-
 FreeSurfer_path = os.path.join(BIDS_path, 'derivatives', 'FreeSurfer')
-subID = 'sub-' + sub + merged + '_T1w_biasCorrected'
+subprocess.run(["mkdir", "-p", FreeSurfer_path])
+
+subID = 'sub-' + sub + merged + '_T1w'
 
 if os.path.isfile(os.path.join(FreeSurfer_path, subID, 'scripts', 'recon-all-status.log')):
 	with open(os.path.join(FreeSurfer_path, subID, 'scripts', 'recon-all-status.log'), 'r') as f:
@@ -732,10 +726,10 @@ if os.path.isfile(os.path.join(FreeSurfer_path, subID, 'scripts', 'recon-all-sta
 	print('Files exist already. Skipping process.')
 else:
 	# Run FreeSurfer with hires flag
-	subprocess.run(["recon-all", "-all", "-hires", "-sd", FreeSurfer_path, "-i", T1w_biasCorrected, "-s", subID])
+	subprocess.run(["recon-all", "-all", "-hires", "-parallel", "-sd", FreeSurfer_path, "-xmask", mask, "-i", T1w, "-s", subID])
 
 ###########################################################################
-# 8.2. Prepare FreeSurfer segmentation for nighres
+# 7.2. Prepare FreeSurfer segmentation for nighres
 # ------------------
 # Here, we transform the segmentation of FreeSurfer into the original space
 # and extract the white matter, gray matter as well as everything else (ee)
@@ -761,7 +755,7 @@ else:
 	subprocess.run(["mri_binarize", "--match", "0", "7", "46", "8", "47", "16", "24", "30", "62", "80", "85", "251", "252", "253", "254", "255", "--i", os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_whole_brain_FreeSurfer.nii.gz'), "--o", os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_ee_binary.nii.gz')])
 
 ###########################################################################
-# 8.3. Topology correction of white matter segmentation
+# 7.3. Topology correction of white matter segmentation
 # ------------------
 # Here, we apply the topology correction module of nighres to the white
 # matter segmentation. This is needed for the CRUISE algorithm.
@@ -782,7 +776,7 @@ topology = nighres.shape.topology_correction(
 	file_name='sub-' + sub + merged + '_segmentation_wm_binary')
 
 ###########################################################################
-# 8.4. Turn binary segmentations into probability maps
+# 7.4. Turn binary segmentations into probability maps
 # ------------------
 # Here, we take the binary segmentation from FreeSurfer and turn them into
 # probability maps by first creating levelsets from the binary images and
@@ -839,7 +833,7 @@ nighres.surface.levelset_to_probability(
 	file_name='sub-' + sub + merged + '_segmentation_ee')
 
 #############################################################################
-# 9. MGDM classification
+# 8. MGDM classification
 # ---------------------
 # Next, we use the masked data as input for tissue classification with the
 # MGDM algorithm. MGDM works with a single contrast, but can be improved
@@ -863,9 +857,7 @@ if reprocess_segmentation:
 	reprocess = True
 
 mgdm = nighres.brain.mgdm_segmentation(
-	#contrast_image2=T1w_biasCorrected_masked,
-	#contrast_type2='Mp2rage7T',
-	contrast_image1=T1map_biasCorrected_masked,
+	contrast_image1=T1map_masked,
 	contrast_type1='T1map7T',
 	n_steps=20,
 	max_iterations=1000,
@@ -894,7 +886,7 @@ for hemi in ["left", "right"]:
 		crop_mask = 'rcrgm'
 		
 	###########################################################################
-	# 10. Extract hemisphere
+	# 9. Extract hemisphere
 	# ------------------
 	# Here, we pull from the MGDM output the needed files to extract the
 	# hemisphere.
@@ -921,7 +913,7 @@ for hemi in ["left", "right"]:
 		output_dir=out_dir)
 		    
 	#############################################################################
-	# 11. Crop volume to hemisphere
+	# 10. Crop volume to hemisphere
 	# --------------------------------
 	# Here, we crop the volume to the hemisphere based on the output of extract
 	# brain region. This will reduce the memory demand tremendously as well as
@@ -1056,7 +1048,35 @@ for hemi in ["left", "right"]:
 		print('Done.')
 
 	#############################################################################
-	# 12. CRUISE cortical reconstruction
+	# XXX. Vessel filter
+	# --------------------------------
+	# Insert comment about the module here if it does what is expected of it.
+	
+	#print('')
+	#print('*****************************************************')
+	#print('* Vessel filter')
+	#print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
+	#print('*****************************************************')	
+	#vessel_filtered = nighres.filtering.multiscale_vessel_filter(
+	#	T1map_masked_cropped, # maybe?
+	#	structure_intensity='bright',
+	#	filterType='RRF',
+	#	propagationtype='diffusion',
+	#	threshold=0.5,
+	#	factor=0.5,
+	#	max_diff=0.001,
+	#	max_itr=100,
+	#	scale_step=1.0,
+	#	scales=4,
+	#	prior_image=None,
+	#	invert_prior=False,
+	#	save_data=True,
+	#	overwrite=reprocess,
+	#	output_dir=out_dir,
+	#	file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere')    
+	
+    #############################################################################
+	# 11. CRUISE cortical reconstruction
 	# --------------------------------
 	# the WM inside mask as a (topologically spherical) starting point to grow a
 	# refined GM/WM boundary and CSF/GM boundary
@@ -1071,9 +1091,9 @@ for hemi in ["left", "right"]:
 		wm_image=inside_proba,
 		gm_image=region_proba,
 		csf_image=background_proba,
-		vd_image=None,
-		data_weight=0.9,
-		regularization_weight=0.1,
+		vd_image=None, #should be vessel_filtered[probability] to make use of the output of the vessel filter
+		data_weight=0.8,
+		regularization_weight=0.2,
 		max_iterations=5000,
 		normalize_probabilities=False,
 		save_data=True,
@@ -1082,9 +1102,9 @@ for hemi in ["left", "right"]:
 		output_dir=out_dir)
 
 	###########################################################################
-	# 13. Extract layers across cortical sheet and map on surface
+	# 12. Extract layers across cortical sheet and map on surface
 	###########################################################################
-	# 13.1 Volumetric layering for depth measures
+	# 12.1 Volumetric layering for depth measures
 	# ---------------------
 	# Finally, we use the GM/WM boundary (GWB) and CSF/GM boundary (CGB) from
 	# CRUISE to compute cortical depth with a volume-preserving technique.
@@ -1106,7 +1126,7 @@ for hemi in ["left", "right"]:
 	layers = nb.load(layers)
 
 	###########################################################################
-	# 13.2. Extract middle layer for surface generation and mapping
+	# 12.2. Extract middle layer for surface generation and mapping
 	# ---------------------
 	# Here, we extract the levelset of the middle layer which will be used to
 	# map the information on.
@@ -1126,7 +1146,7 @@ for hemi in ["left", "right"]:
 		del tmp
 
 	###########################################################################
-	# 13.3 Cortical surface generation and inflation of middle layer
+	# 12.3 Cortical surface generation and inflation of middle layer
 	# ---------------------
 	# Here, we create a surface from the levelset of the middle layer and
 	# inflate it afterwards for better visualisation.
@@ -1155,7 +1175,7 @@ for hemi in ["left", "right"]:
 		                    output_dir=out_dir)
 
 	###########################################################################
-	# 13.4. Profile sampling of all layers 
+	# 12.4. Profile sampling of all layers 
 	# ---------------------
 	# Here, we sample the T1 values of the T1map onto all layers.
 	print('')
@@ -1175,7 +1195,7 @@ for hemi in ["left", "right"]:
 	profile = nb.load(profile)
 
 	###########################################################################
-	# 13.5. Extract all cortical layers and map on surface 
+	# 12.5. Extract all cortical layers and map on surface 
 	# ---------------------
 	# Here, we extract the layers 3 to 18, removing layers close to the white
 	# matter and cerebrospinal fluid to avoid partial volume effects.
@@ -1210,7 +1230,7 @@ for hemi in ["left", "right"]:
 
 
 	###########################################################################
-	# 13.6. Extract deep cortical layers and map on surface 
+	# 12.6. Extract deep cortical layers and map on surface 
 	# ---------------------
 	# Here, we extract the layers 3 to 6, to cover the "deep" layers. 
 	# Afterwards the information is mapped on the original and inflated
@@ -1242,7 +1262,7 @@ for hemi in ["left", "right"]:
 		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere_extractedLayers-deepLayers.vtk')
 
 	###########################################################################
-	# 13.7. Extract inner middle cortical layers and map on surface 
+	# 12.7. Extract inner middle cortical layers and map on surface 
 	# ---------------------
 	# Here, we extract the layers 7 to 10, to cover the "inner middle" layers. 
 	# Afterwards the information is mapped on the original and inflated
@@ -1274,7 +1294,7 @@ for hemi in ["left", "right"]:
 		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere_extractedLayers-innerLayers.vtk')
 
 	###########################################################################
-	# 13.8. Extract outer middle cortical layers and map on surface 
+	# 12.8. Extract outer middle cortical layers and map on surface 
 	# ---------------------
 	# Here, we extract the layers 11 to 14, to cover the "outer middle" layers. 
 	# Afterwards the information is mapped on the original and inflated
@@ -1306,7 +1326,7 @@ for hemi in ["left", "right"]:
 		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere_extractedLayers-outerLayers.vtk')
 
 	###########################################################################
-	# 13.9. Extract superficial cortical layers and map on surface 
+	# 12.9. Extract superficial cortical layers and map on surface 
 	# ---------------------
 	# Here, we extract the layers 15 to 18, to cover the "superficial" layers. 
 	# Afterwards the information is mapped on the original and inflated
@@ -1338,13 +1358,13 @@ for hemi in ["left", "right"]:
 		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere_extractedLayers-superficialLayers.vtk')
 
 	############################################################################
-	# 14. Process additional data.
+	# 13. Process additional data.
 	# -------------------
 	if reprocess_map_data:
 		reprocess = True
 
 	############################################################################
-	# 14.1 Register additional data to (upsampled) T1map
+	# 13.1. Register additional data to (upsampled) T1map
 	# -------------------
 	if map_file_onto_surface:
 		if hires == True:
@@ -1353,14 +1373,14 @@ for hemi in ["left", "right"]:
 			print('* Register additional data to upsampled T1map')
 			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 			print('*****************************************************')
-			reg1 = 'sub-' + sub + '_' + map_data_output + '_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected'
+			reg1 = 'sub-' + sub + '_' + map_data_output + '_registered_to_sub-' + sub + '_run-01_T1map_resampled'
 		else:
 			print('')
 			print('*****************************************************')
 			print('* Register additional data to T1map')
 			print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 			print('*****************************************************')
-			reg1 = 'sub-' + sub + '_' + map_data_output + '_registered_to_sub-' + sub + '_run-01_T1map_biasCorrected'
+			reg1 = 'sub-' + sub + '_' + map_data_output + '_registered_to_sub-' + sub + '_run-01_T1map'
 
 		if os.path.isfile(os.path.join(out_dir, reg1 + '.nii.gz')) and reprocess != True:
 			print('File exists already. Skipping process.')
@@ -1375,7 +1395,7 @@ for hemi in ["left", "right"]:
 			# Register additional data non-linearly to T1map using mutual information as similarity metric
 			registeredImage = ants.registration(
 				fixed = map_data_masked,
-				moving = ants.image_read(T1map_biasCorrected_masked),
+				moving = ants.image_read(T1map_masked),
 				type_of_transform = 'SyNRA',
 				aff_random_sampling_rate = 1,
 				grad_step = 0.1,
@@ -1386,7 +1406,7 @@ for hemi in ["left", "right"]:
 
 			# Apply transformation
 			warpedImage = ants.apply_transforms(
-				fixed = ants.image_read(T1map_biasCorrected),
+				fixed = ants.image_read(T1map),
 				moving = ants.image_read(map_data),
 				transformlist = registeredImage['invtransforms'],
 				interpolator = interpolation_method,
@@ -1400,7 +1420,7 @@ for hemi in ["left", "right"]:
 			map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 
 	############################################################################
-	# 14.2. Crop additional data to hemispehre
+	# 13.2. Crop additional data to hemispehre
 	# -------------------
 	if map_file_onto_surface:
 		print('')
@@ -1457,7 +1477,7 @@ for hemi in ["left", "right"]:
 			print('Done.')
 
 	###########################################################################
-	# 14.3. Profile sampling of additional data of all layers and mapping it
+	# 13.3. Profile sampling of additional data of all layers and mapping it
 	# 		onto the surface 
 	# ---------------------
 	# Here, we sample the information of the additional data onto all layers.
@@ -1508,13 +1528,13 @@ for hemi in ["left", "right"]:
 		    file_name='sub-' + sub + '_' + map_data_output + '_' + hemi + 'Hemisphere_extractedLayers-allLayers.vtk')
 
 	############################################################################
-	# 15. Process transformed data.
+	# 14. Process transformed data.
 	# -------------------
 	if reprocess_map_data:
 		reprocess = True
 
 	############################################################################
-	# 15.1 Apply transformation to data to be mapped on the surface
+	# 14.1 Apply transformation to data to be mapped on the surface
 	# -------------------
 	# Define file name for output of transformation.
 	if map_file_onto_surface and map_transform_file_onto_surface:
@@ -1522,15 +1542,15 @@ for hemi in ["left", "right"]:
 			reg2 = []
 			for name in transform_data_output:
 				if hires == True:
-					reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz')
+					reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map_resampled.nii.gz')
 				else:
-					reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz')
+					reg2.append('sub-' + sub + '_' + name + '_registered_to_' + sub + '_run-01_T1map.nii.gz')
 
 		else:
 			if hires == True:
-				reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_resampled_biasCorrected.nii.gz'
+				reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_resampled.nii.gz'
 			else:
-				reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map_biasCorrected.nii.gz'
+				reg2 = 'sub-' + sub + '_' + transform_data_output + '_registered_to_' + sub + '_run-01_T1map.nii.gz'
 
 		print('')
 		print('*****************************************************')
@@ -1547,7 +1567,7 @@ for hemi in ["left", "right"]:
 				for i in range(length):
 					# Apply transformation
 					warpedImage = ants.apply_transforms(
-						fixed = ants.image_read(T1map_biasCorrected),
+						fixed = ants.image_read(T1map),
 						moving = ants.image_read(transform_data[i]),
 						transformlist = registeredImage['invtransforms'],
 						interpolator = interpolation_method,
@@ -1564,7 +1584,7 @@ for hemi in ["left", "right"]:
 			else:
 				# Apply transformation
 				warpedImage = ants.apply_transforms(
-					fixed = ants.image_read(T1map_biasCorrected),
+					fixed = ants.image_read(T1map),
 					moving = ants.image_read(transform_data),
 				    transformlist = registeredImage['invtransforms'],
 					interpolator = interpolation_method,
@@ -1583,7 +1603,7 @@ for hemi in ["left", "right"]:
 			transform_data = os.path.join(out_dir, reg2)
 
 	############################################################################
-	# 15.1. Crop additionally transformed data to hemisphere
+	# 14.2. Crop additionally transformed data to hemisphere
 	# -------------------
 	if map_transform_file_onto_surface:
 		print('')
@@ -1694,7 +1714,7 @@ for hemi in ["left", "right"]:
 				print('Done.')
 
 	###########################################################################
-	# 15.2. Profile sampling of transformed data of all layers and mapping it
+	# 14.3. Profile sampling of transformed data of all layers and mapping it
 	# 		onto the surface 
 	# ---------------------
 	# Here, we sample the information of the transformed data onto all layers.
@@ -1821,30 +1841,30 @@ else:
 #	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 #	print('*****************************************************')
 #
-#	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected.nii.gz')) and reprocess != True:
+#	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz')) and reprocess != True:
 #		print('File exists already. Skipping process.')
 #
 #		# Update file names
-#		T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected_masked.nii.gz')
+#		T1w_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_masked.nii.gz')
 #		T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz')
-#		T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected_masked.nii.gz')
+#		T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz')
 #	else:
 #		# Load data
-#		T1map_biasCorrected = ants.image_read(T1map_biasCorrected)
-#		T1map_slab_biasCorrected_reg = ants.image_read(T1map_slab_biasCorrected_reg)
+#		T1map = ants.image_read(T1map)
+#		T1map_slab_reg = ants.image_read(T1map_slab_reg)
 #
 #		T1map = ants.image_read(T1map)
 #		T1map_slab_reg = ants.image_read(T1map_slab_reg)
 #
-#		T1w_biasCorrected = ants.image_read(T1w_biasCorrected)
-#		T1w_slab_biasCorrected_reg = ants.image_read(T1w_slab_biasCorrected_reg)
+#		T1w = ants.image_read(T1w)
+#		T1w_slab_reg = ants.image_read(T1w_slab_reg)
 #
 #		mask = ants.image_read(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_brainmask.nii.gz'))
-#		mask_slab_reg = ants.image_read(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_biasCorrected_masked.nii.gz'))
+#		mask_slab_reg = ants.image_read(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1map_brainmask_registered_to_sub-' + sub + '_run-01_T1map_resampled_masked.nii.gz'))
 #
 #		# Create volume filled with zeros
-#		clone = ants.image_clone(T1w_biasCorrected)
-#		weighted = ants.image_clone(T1w_biasCorrected)
+#		clone = ants.image_clone(T1w)
+#		weighted = ants.image_clone(T1w)
 #		weighted[:,:,:] = 0
 #
 #		# Get white matter segmentation from whole brain image
@@ -1853,7 +1873,7 @@ else:
 #			print('File exists already. Skipping process.')
 #			WM_segmentation = ants.image_read(os.path.join(out_dir, 'sub-' + sub + '_run-01_T1w' + resampled + '_WM_segmentation.nii.gz'))
 #		else:
-#			WM_segmentation = ants.atropos(a=T1w_biasCorrected, x=mask, m='[0.2,1x1x1]', c='[3,0]', i='kmeans[3]', v=1)['segmentation']
+#			WM_segmentation = ants.atropos(a=T1w, x=mask, m='[0.2,1x1x1]', c='[3,0]', i='kmeans[3]', v=1)['segmentation']
 #			WM_segmentation = ants.threshold_image(WM_segmentation, low_thresh=3, high_thresh=3, inval=1, outval=0, binary=False)
 #			WM_segmentation = ants.iMath(WM_segmentation, 'GetLargestComponent')
 #			WM_segmentation = ants.morphology(WM_segmentation, operation='dilate', radius=1, mtype='grayscale', shape='box')
@@ -1866,7 +1886,7 @@ else:
 #			print('File exists already. Skipping process.')
 #			WM_segmentation_slab = ants.image_read(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_WM_segmentation.nii.gz'))
 #		else:
-#			WM_segmentation_slab = ants.atropos(a=T1w_slab_biasCorrected_reg, x=mask_slab_reg, m='[0.2,1x1x1]', c='[3,0]', i='kmeans[3]', v=1)['segmentation']
+#			WM_segmentation_slab = ants.atropos(a=T1w_slab_reg, x=mask_slab_reg, m='[0.2,1x1x1]', c='[3,0]', i='kmeans[3]', v=1)['segmentation']
 #			WM_segmentation_slab = ants.threshold_image(WM_segmentation_slab, low_thresh=3, high_thresh=3, inval=1, outval=0, binary=False)
 #			WM_segmentation_slab = ants.iMath(WM_segmentation_slab, 'GetLargestComponent')
 #			WM_segmentation_slab = ants.morphology(WM_segmentation_slab, operation='dilate', radius=1, mtype='grayscale', shape='box')
@@ -1876,33 +1896,33 @@ else:
 #		ratio_T1w = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #		
 #		# Mask T1map to calulate ratio between quantitateve T1 whole brain white matter segmentation and high resolution slab data
-#		WM_segmentation = ants.mask_image(T1map_biasCorrected,WM_segmentation,binarize=False)
-#		WM_segmentation_slab = ants.mask_image(T1map_slab_biasCorrected_reg,WM_segmentation_slab,binarize=False)
+#		WM_segmentation = ants.mask_image(T1map,WM_segmentation,binarize=False)
+#		WM_segmentation_slab = ants.mask_image(T1map_slab_reg,WM_segmentation_slab,binarize=False)
 #		
 #		# Calulate ratio between T1map whole brain white matter segmentation and high resolution slab data
 #		ratio_T1map = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #
 #		# Get dimensions of image for looping
-#		size = T1w_biasCorrected.shape
+#		size = T1w.shape
 #
 #		# Convert to numpy
-#		T1map_biasCorrected_image = T1map_biasCorrected.numpy()
-#		T1map_slab_biasCorrected_reg_image = T1map_slab_biasCorrected_reg.numpy()
+#		T1map_image = T1map.numpy()
+#		T1map_slab_reg_image = T1map_slab_reg.numpy()
 #
 #		T1map_image = T1map.numpy()
 #		T1map_slab_reg_image = T1map_slab_reg.numpy()
 #
-#		T1w_biasCorrected_image = T1w_biasCorrected.numpy()
-#		T1w_slab_biasCorrected_reg_image = T1w_slab_biasCorrected_reg.numpy()
+#		T1w_image = T1w.numpy()
+#		T1w_slab_reg_image = T1w_slab_reg.numpy()
 #
-#		T1map_biasCorrected_weighted_image = weighted.numpy()
 #		T1map_weighted_image = weighted.numpy()
-#		T1w_biasCorrected_weighted_image = weighted.numpy()
+#		T1map_weighted_image = weighted.numpy()
+#		T1w_weighted_image = weighted.numpy()
 #		
 #		# Weight whole brain image by ratio to harmonize intensities between whole brain and slab data
 #		T1map_image = T1map_image / ratio_T1map
-#		T1map_biasCorrected_image = T1map_biasCorrected_image / ratio_T1map
-#		T1w_biasCorrected_image = T1w_biasCorrected_image / ratio_T1w
+#		T1map_image = T1map_image / ratio_T1map
+#		T1w_image = T1w_image / ratio_T1w
 #
 #		print('')
 #		print('Combining data...')
@@ -1910,22 +1930,22 @@ else:
 #			for y in range(size[1]-1):
 #				for z in range(size[2]-1,-1,-1):
 #					# If high resolution slab (and new image) is 0, then use low resolution whole brain data
-#					if T1map_biasCorrected_image[x,y,z] != 0 and T1map_slab_biasCorrected_reg_image[x,y,z] == 0 and T1map_weighted_image[x,y,z] == 0:
+#					if T1map_image[x,y,z] != 0 and T1map_slab_reg_image[x,y,z] == 0 and T1map_weighted_image[x,y,z] == 0:
 #						T1map_weighted_image[x,y,z] = T1map_image[x,y,z]
-#						T1map_biasCorrected_weighted_image[x,y,z] = T1map_biasCorrected_image[x,y,z]
-#						T1w_biasCorrected_weighted_image[x,y,z] = T1w_biasCorrected_image[x,y,z]
+#						T1map_weighted_image[x,y,z] = T1map_image[x,y,z]
+#						T1w_weighted_image[x,y,z] = T1w_image[x,y,z]
 #					# If both, the low resolution whole brain and high resolution slab data are not zero ...
-#					elif T1map_biasCorrected_image[x,y,z] != 0 and T1map_slab_biasCorrected_reg_image[x,y,z] != 0 and T1map_weighted_image[x,y,z] == 0:
+#					elif T1map_image[x,y,z] != 0 and T1map_slab_reg_image[x,y,z] != 0 and T1map_weighted_image[x,y,z] == 0:
 #						# ... use high resolution slab data for the superior two third of the brain
 #						if z >= round(size[2]*2/3):
 #							T1map_weighted_image[x,y,z] = T1map_slab_reg_image[x,y,z]
-#							T1map_biasCorrected_weighted_image[x,y,z] = T1map_slab_biasCorrected_reg_image[x,y,z]
-#							T1w_biasCorrected_weighted_image[x,y,z] = T1w_slab_biasCorrected_reg_image[x,y,z]
+#							T1map_weighted_image[x,y,z] = T1map_slab_reg_image[x,y,z]
+#							T1w_weighted_image[x,y,z] = T1w_slab_reg_image[x,y,z]
 #						# ... for the inferior one third of the brain calculate a weighted average of the low resolution whole brain and high resolution slab data depending on the distance.
 #						else:
 #							counter = 0
 #							# Get distance here by iterating through the data until slab data is zero
-#							while T1map_slab_biasCorrected_reg_image[x,y,z-counter] != 0 and T1map_weighted_image[x,y,z] == 0:
+#							while T1map_slab_reg_image[x,y,z-counter] != 0 and T1map_weighted_image[x,y,z] == 0:
 #								counter += 1
 #								if z-counter < 1:
 #									counter -= 1
@@ -1933,38 +1953,38 @@ else:
 #
 #							# Weight low resolution as well as high resolution slab data accordingly by the distance
 #							for weight_in_z in range(counter):
-#								T1map_biasCorrected_weighted_image[x,y,z-weight_in_z]=T1map_biasCorrected_image[x,y,z-weight_in_z]*weight_in_z/counter+T1map_slab_biasCorrected_reg_image[x,y,z-weight_in_z]*(1-weight_in_z/counter)
+#								T1map_weighted_image[x,y,z-weight_in_z]=T1map_image[x,y,z-weight_in_z]*weight_in_z/counter+T1map_slab_reg_image[x,y,z-weight_in_z]*(1-weight_in_z/counter)
 #								
 #								T1map_weighted_image[x,y,z-weight_in_z]=T1map_image[x,y,z-weight_in_z]*weight_in_z/counter+T1map_slab_reg_image[x,y,z-weight_in_z]*(1-weight_in_z/counter)
 #								
-#								T1w_biasCorrected_weighted_image[x,y,z-weight_in_z]=T1w_biasCorrected_image[x,y,z-weight_in_z]*weight_in_z/counter+T1w_slab_biasCorrected_reg_image[x,y,z-weight_in_z]*(1-weight_in_z/counter)
+#								T1w_weighted_image[x,y,z-weight_in_z]=T1w_image[x,y,z-weight_in_z]*weight_in_z/counter+T1w_slab_reg_image[x,y,z-weight_in_z]*(1-weight_in_z/counter)
 #					
-#					if T1map_biasCorrected_weighted_image[x,y,z] < 0:
-#						T1map_biasCorrected_weighted_image[x,y,z] = 0
+#					if T1map_weighted_image[x,y,z] < 0:
+#						T1map_weighted_image[x,y,z] = 0
 #
 #		print('Done')
 #		
 #		# Copy numpy array into image
-#		T1map_biasCorrected = weighted.new_image_like(T1map_biasCorrected_weighted_image)
 #		T1map = weighted.new_image_like(T1map_weighted_image)
-#		T1w_biasCorrected = weighted.new_image_like(T1w_biasCorrected_weighted_image)
+#		T1map = weighted.new_image_like(T1map_weighted_image)
+#		T1w = weighted.new_image_like(T1w_weighted_image)
 #
 #		# Mask image
-#		T1map_biasCorrected_masked = ants.mask_image(T1map_biasCorrected,mask)
 #		T1map_masked = ants.mask_image(T1map,mask)
-#		T1w_biasCorrected_masked = ants.mask_image(T1w_biasCorrected,mask)
+#		T1map_masked = ants.mask_image(T1map,mask)
+#		T1w_masked = ants.mask_image(T1w,mask)
 #
 #		# Write to disk
-#		ants.image_write(T1map_biasCorrected, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected.nii.gz'))
-#		ants.image_write(T1map_biasCorrected_masked, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected_masked.nii.gz'))
+#		ants.image_write(T1map, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz'))
+#		ants.image_write(T1map_masked, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz'))
 #
 #		ants.image_write(T1map, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz'))
 #		ants.image_write(T1map_masked, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz'))
 #
-#		ants.image_write(T1w_biasCorrected, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected.nii.gz'))
-#		ants.image_write(T1w_biasCorrected_masked, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected_masked.nii.gz'))
+#		ants.image_write(T1w, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w.nii.gz'))
+#		ants.image_write(T1w_masked, os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_masked.nii.gz'))
 #
 #		# Update file names
-#		T1w_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_biasCorrected_masked.nii.gz')
+#		T1w_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1w_masked.nii.gz')
 #		T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz')
-#		T1map_biasCorrected_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_biasCorrected_masked.nii.gz')
+#		T1map_masked = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map_masked.nii.gz')

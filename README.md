@@ -1,7 +1,7 @@
 # Introduction
-This is a pipeline for mapping quantitative T1 values of MP2RAGE data on the brain surface.
+This is a pipeline for depth dependeng mapping of quantitative T1 values on the brain surface using MP2RAGE data as primary input.
 
-The script requires whole brain MP2RAGE data organized according to BIDS (https://bids-specification.readthedocs.io/). You can make use of a high resolution MP2RAGE slab additionally. The slab will be merged into the whole brain volume automatically and used for further processing. 
+The script requires whole brain MP2RAGE data organized according to BIDS (https://bids-specification.readthedocs.io/). You can make use of a high resolution MP2RAGE slab additionally. The slab will be merged into the whole brain volume automatically and used for further processing. However, currently this is hardcoded to an isotropic resolution of 500 µm.
 
 Furthermore, you can specify volumes which will be mapped on the surface additionally. This is meant for mapping information of another contrast on the surface, e.g. QSM data or fMRI results.
 
@@ -31,12 +31,9 @@ Things needed to be installed:
 2. antspy (tested with v0.3.2: https://github.com/ANTsX/ANTsPy)
 3. FreeSurfer (tested with v7.3.2: https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall)
 4. MATLAB (tested with R2022a)
-5. SPM12 (https://www.fil.ion.ucl.ac.uk/spm/software/download/)
-6. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
-7. Custom MATLAB scripts (weightedAverage, removeBackgroundnoise and biasCorrection)
-
-You need to change the path to the tissue probability model of SPM12 for the bias
-field correction method. This needs to be done in ./biasCorrection/preproc_sensemap.m on line 19
+5. MP2RAGE-related-scripts (https://github.com/JosePMarques/MP2RAGE-related-scripts)
+6. Tools for NIfTI and Analyze image format (https://www.mathworks.com/matlabcentral/fileexchange/8797-tools-for-nifti-and-analyze-image)
+7. Custom MATLAB scripts (weightedAverage and removeBackgroundnoise)
 
 ## Brief instructions for use
 This script requires whole brain MP2RAGE data organized according to BIDS. The script expects the first and second inversion, the T1 weighted data as
@@ -67,7 +64,7 @@ A few flags have been set up which allow to reprocess data at various stages of 
 Sample data can be made avaiable upon request.
 
 ## Version
-1 (14.02.2023)
+1.1 (23.02.2023)
 
 ## Contact information
 Dr. Falk Luesebrink

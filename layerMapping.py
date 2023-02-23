@@ -1,5 +1,5 @@
 '''
-Mapping of quantitative T1 values from MP2RAGE data onto surface
+Depth dependend mapping of quantitative T1 values from MP2RAGE data onto surface
 =======================================
 
 This is a pipeline processing BIDS formatted MP2RAGE data by performing the following steps:

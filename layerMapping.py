@@ -42,11 +42,12 @@ Version 1.1. (23.02.2023)
 # -------------------
 # 0. Largest Component for white semgentation?
 # 1. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
-# 2. Get rid of MATLAB:
+# 2. Add flags for convient use
+# 3. Get rid of MATLAB:
 #	   * MP2RAGE background cleaning [Needs to be re-written]
 #	   * Combination of high resolution slab and low resolution whole brain data [Note: Function is included at the end. However, MATLAB function provides better (?) results. At least using the Python implementation CRUISE produced more error. Maybe due to using the FreeSurfer segmentation this is not an issue anymore]
-# 3. Flag to write all data to disk or final results only
-# 4. Add logging feature
+# 4. Flag to write all data to disk or final results only
+# 5. Add logging feature
 #
 
 ############################################################################

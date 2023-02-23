@@ -22,9 +22,6 @@ The pipeline consists of following stages:
 14. Process addtional data (if data is specified)
 15. Process transform data (if data is specified)
 
-## Acknowledgement
-This work was supported by CRC 1436 "Neural Resources of Cognition" of the German Research Foundation (DFG) under project ID 425899996.
-
 ## Installation instructions
 Things needed to be installed:
 1. Nighres (tested with v1.4: https://nighres.readthedocs.io/en/latest/installation.html)
@@ -69,3 +66,6 @@ Sample data can be made avaiable upon request.
 ## Contact information
 Dr. Falk Luesebrink
 (falk dot luesebrink at ovgu dot de)
+
+## Acknowledgement
+This work was supported by CRC 1436 "Neural Resources of Cognition" of the German Research Foundation (DFG) under project ID 425899996.

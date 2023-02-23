@@ -315,7 +315,7 @@ else:
 	print('		 ./BIDS_path/')
 	print(' 	 └── /sub-' + sub + '/')
 	print('		 	  └── anat')
-    print('			      ├── sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
+    	print('			      ├── sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_T1map.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_UNIT1.nii.gz')

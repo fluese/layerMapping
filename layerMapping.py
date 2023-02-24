@@ -1,5 +1,5 @@
 '''
-Depth dependend mapping of quantitative T1 values from MP2RAGE data onto surface
+Depth depended mapping of quantitative T1 values from MP2RAGE data onto surface
 =======================================
 
 This is a pipeline processing BIDS formatted MP2RAGE data by performing the following steps:
@@ -19,7 +19,7 @@ This is a pipeline processing BIDS formatted MP2RAGE data by performing the foll
 13. Process addtional data (if data is specified)
 14. Process transform data (if data is specified)
 
-Version 1.1. (23.02.2023) 
+Version 1.1. (24.02.2023) 
 '''
 
 ############################################################################
@@ -40,7 +40,7 @@ Version 1.1. (23.02.2023)
 ############################################################################
 # THINGS TO DO
 # -------------------
-# 0. Largest Component for white semgentation?
+# 0. Largest Component for white segmentation?
 # 1. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
 # 2. Add flags for convient use
 # 3. Get rid of MATLAB:

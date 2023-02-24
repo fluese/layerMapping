@@ -1,5 +1,5 @@
 '''
-Depth dependend mapping of quantitative T1 values from MP2RAGE data onto surface
+Depth depended mapping of quantitative T1 values from MP2RAGE data onto surface
 =======================================
 
 This is a pipeline processing BIDS formatted MP2RAGE data by performing the following steps:
@@ -16,10 +16,10 @@ This is a pipeline processing BIDS formatted MP2RAGE data by performing the foll
 10. Crop volume to hemisphere
 11. CRUISE cortical reconstruction
 12. Extract layers across cortical sheet and map on surface
-13. Process addtional data (if data is specified)
+13. Process additional data (if data is specified)
 14. Process transform data (if data is specified)
 
-Version 1.1. (23.02.2023) 
+Version 1.1. (24.02.2023) 
 '''
 
 ############################################################################
@@ -40,9 +40,9 @@ Version 1.1. (23.02.2023)
 ############################################################################
 # THINGS TO DO
 # -------------------
-# 0. Largest Component for white semgentation?
+# 0. Largest Component for white segmentation?
 # 1. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
-# 2. Add flags for convient use
+# 2. Add flags for convenient use
 # 3. Get rid of MATLAB:
 #	   * MP2RAGE background cleaning [Needs to be re-written]
 #	   * Combination of high resolution slab and low resolution whole brain data [Note: Function is included at the end. However, MATLAB function provides better (?) results. At least using the Python implementation CRUISE produced more error. Maybe due to using the FreeSurfer segmentation this is not an issue anymore]
@@ -168,7 +168,7 @@ hires = True
 # fMRI time series (preferably the mean across the time series) or the
 # magnitude data of a QSM volume. This volume will be registered to the
 # T1map of the MP2RAGE volume.
-# Requries an absolute path to a NIfTI file. Results will be written to
+# Requires an absolute path to a NIfTI file. Results will be written to
 # <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
 # non-existing file, the according option will be omitted.
 map_data = ''
@@ -179,7 +179,7 @@ map_data = ''
 # Transform data in the same space as 'map_data' which is then mapped onto
 # the surface. Could for example be the statistical maps of SPM from fMRI or the
 # Chi map of QSM data.
-# Requries an absolute path to a NIfTI file or a directory containing compressed
+# Requires an absolute path to a NIfTI file or a directory containing compressed
 # NIfTI files. The transformation is then applied to all files within the
 # directory. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
@@ -191,7 +191,7 @@ transform_data = ''
 #transform_data = BIDS_path + 'derivatives/sub-aaa/pRF_model/'
 
 # Choose interpolation method for mapping of additional data. Choice of
-# interpolator can be 'linear', 'nearstNeighbor, 'bSpline', 'genericLabel'.
+# interpolator can be 'linear', 'nearestNeighbor, 'bSpline', 'genericLabel'.
 # See https://antspy.readthedocs.io/en/latest/_modules/ants/registration/apply_transforms.html 
 # for full list of supported interpolators.
 interpolation_method = 'nearestNeighbor'
@@ -217,7 +217,7 @@ reprocess_rightHemisphere = False
 # In this scenario you would want to set this flag to true, change the path
 # of 'map_data' and 'transform_data' to your QSM data and the resulting
 # Chi map, respectively. All other reprocess flags should be set to 'False'
-# to avoid unnessecary reprocessing.
+# to avoid unnecessecary reprocessing.
 # The basename of the output will be based on the file name of the input
 # data. According to BIDS the subject label will be added as prefix to all
 # output data.
@@ -394,7 +394,7 @@ elif os.path.isdir(transform_data) or os.path.isfile(transform_data):
 		if 'sub-' + sub in transform_data_output:
 			transform_data_output = transform_data_output[8:]
 
-# For nameing and checking of processing files.
+# For naming and checking of processing files.
 if hires == True:
 	merged = '_merged_run-01+02'
 	resampled = '_resampled'
@@ -568,7 +568,7 @@ if hires == True:
 # Changes of the script include initial moving transform (from origin to
 # contrast), number of iterations, precision of float instead double as
 # well as BSpline interpolation instead of linear interpolation for
-# sharper respresentation of the resulting volume.
+# sharper representation of the resulting volume.
 if hires == True:
 	print('')
 	print('*****************************************************')
@@ -953,7 +953,7 @@ for hemi in ["left", "right"]:
 		del tmp_1
 		del tmp_2
 
-		# Apply cropping to binary white matter mak
+		# Apply cropping to binary white matter mask
 		img = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_wm_binary.nii.gz'))
 		tmp = img.get_fdata()
 		inside_mask = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
@@ -1421,7 +1421,7 @@ for hemi in ["left", "right"]:
 			map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 
 	############################################################################
-	# 13.2. Crop additional data to hemispehre
+	# 13.2. Crop additional data to hemisphere
 	# -------------------
 	if map_file_onto_surface:
 		print('')
@@ -1893,14 +1893,14 @@ else:
 #			WM_segmentation_slab = ants.morphology(WM_segmentation_slab, operation='dilate', radius=1, mtype='grayscale', shape='box')
 #			ants.image_write(WM_segmentation, os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_WM_segmentation.nii.gz'))
 #
-#		# Calulate ratio between T1w whole brain white matter segmentation and high resolution slab data
+#		# Calculate ratio between T1w whole brain white matter segmentation and high resolution slab data
 #		ratio_T1w = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #		
-#		# Mask T1map to calulate ratio between quantitateve T1 whole brain white matter segmentation and high resolution slab data
+#		# Mask T1map to calculate ratio between quantitative T1 whole brain white matter segmentation and high resolution slab data
 #		WM_segmentation = ants.mask_image(T1map,WM_segmentation,binarize=False)
 #		WM_segmentation_slab = ants.mask_image(T1map_slab_reg,WM_segmentation_slab,binarize=False)
 #		
-#		# Calulate ratio between T1map whole brain white matter segmentation and high resolution slab data
+#		# Calculate ratio between T1map whole brain white matter segmentation and high resolution slab data
 #		ratio_T1map = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #
 #		# Get dimensions of image for looping

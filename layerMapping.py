@@ -793,7 +793,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_wm_binary')
+	file_name='sub-' + sub + merged + '_segmentation_wm')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -808,7 +808,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_gm_binary')
+	file_name='sub-' + sub + merged + '_segmentation_gm')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -823,7 +823,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_ee_binary')
+	file_name='sub-' + sub + merged + '_segmentation_ee')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],

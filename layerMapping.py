@@ -686,7 +686,7 @@ if hires == True:
 		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 		output = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz')
-		cmd = "weightedAverage(\'" + T1w + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
+		cmd = "weightedAverage(\'" + T1map + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
 		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 	# Update file names
@@ -793,7 +793,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged)
+	file_name='sub-' + sub + merged + '_segmentation_wm_binary')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -808,7 +808,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged)
+	file_name='sub-' + sub + merged + '_segmentation_gm_binary')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -816,14 +816,14 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_gm')
+	file_name='sub-' + sub + merged + '_segmentation_gm_binary')
 
 p2l = nighres.surface.probability_to_levelset(
 	os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_ee_binary.nii.gz'),
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged)
+	file_name='sub-' + sub + merged + '_segmentation_ee_binary')
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -831,7 +831,7 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_ee')
+	file_name='sub-' + sub + merged + '_segmentation_ee_binary')
 
 #############################################################################
 # 8. MGDM classification

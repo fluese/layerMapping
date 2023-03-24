@@ -801,7 +801,7 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_wm_binary')
+	file_name='sub-' + sub + merged + '_segmentation_wm')
 
 p2l = nighres.surface.probability_to_levelset(
 	os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_gm_binary.nii.gz'),
@@ -816,7 +816,7 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_gm_binary')
+	file_name='sub-' + sub + merged + '_segmentation_gm')
 
 p2l = nighres.surface.probability_to_levelset(
 	os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_ee_binary.nii.gz'),
@@ -831,7 +831,7 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_ee_binary')
+	file_name='sub-' + sub + merged + '_segmentation_ee')
 
 #############################################################################
 # 8. MGDM classification

@@ -1,5 +1,5 @@
 '''
-Depth depended mapping of quantitative T1 values from MP2RAGE data onto surface
+Mapping of quantitative T1 values from MP2RAGE data onto surface
 =======================================
 
 This is a pipeline processing BIDS formatted MP2RAGE data by performing the following steps:
@@ -16,10 +16,10 @@ This is a pipeline processing BIDS formatted MP2RAGE data by performing the foll
 10. Crop volume to hemisphere
 11. CRUISE cortical reconstruction
 12. Extract layers across cortical sheet and map on surface
-13. Process additional data (if data is specified)
+13. Process addtional data (if data is specified)
 14. Process transform data (if data is specified)
 
-Version 1.1. (24.02.2023) 
+Version 1.2. (08.06.2023) 
 '''
 
 ############################################################################
@@ -40,14 +40,13 @@ Version 1.1. (24.02.2023)
 ############################################################################
 # THINGS TO DO
 # -------------------
-# 0. Largest Component for white segmentation?
+# 0. Largest Component for white semgentation?
 # 1. Hard coded resolution for high resolution pipeline should be set automatically based on slab's resolution
-# 2. Add flags for convenient use
-# 3. Get rid of MATLAB:
+# 2. Get rid of MATLAB:
 #	   * MP2RAGE background cleaning [Needs to be re-written]
 #	   * Combination of high resolution slab and low resolution whole brain data [Note: Function is included at the end. However, MATLAB function provides better (?) results. At least using the Python implementation CRUISE produced more error. Maybe due to using the FreeSurfer segmentation this is not an issue anymore]
-# 4. Flag to write all data to disk or final results only
-# 5. Add logging feature
+# 3. Flag to write all data to disk or final results only
+# 4. Add logging feature
 #
 
 ############################################################################
@@ -84,10 +83,10 @@ Version 1.1. (24.02.2023)
 # beginning of the script.
 #
 # Example use (Case 1):
-# python3 layerMapping.py aaa /path/to/BIDS/data/
+# python3 layerMapping.py -s aaa -p /path/to/BIDS/data/
 #
 # Example use (Case 2):
-# python3 layerMapping.py aaa
+# python3 layerMapping.py -s aaa
 #
 # Example use (Case 3):
 # python3 layerMapping.py
@@ -137,41 +136,65 @@ import ants
 import nibabel as nb
 import glob
 import subprocess
+import argparse
 from nilearn.image import mean_img
 from nilearn.image import crop_img
 from nibabel.processing import conform
 from time import localtime, strftime
 
+
+
 ############################################################################
 # 1.2. Set parameters
 # -------------------
+# Setup argument parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--subject_id", help="Defines subject ID of BIDS structured data.")
+parser.add_argument("-p", "--BIDS_path", help="Defines path to BIDS structured data.")
+parser.add_argument("-r", "--hires", choices=['true', 'false'], help="Process with using an additional high resolution MP2RAGE slab (Boolean).")
+parser.add_argument("-m", "--map_data", help="Map specified volume onto the generated surface.")
+parser.add_argument("-t", "--transform_data", help="Transform data into the same space as map data and map it onto the surface afterwards. Can be folder with NIfTI files.")
+args = parser.parse_args()
+
 # Define subject to be processed according to BIDS nomenclature here. If
 # left empty, the user will be asked to specify the subject's ID during
 # processing. Otherwise, the first input after the script is meant to
 # specify the subject ID.
 # sub = 'aaa'
-sub = ''
+if args.subject_id:
+    sub = args.subject_id
+else:
+    sub = ''
 
 # Define BIDS path here. If left empty, the user will be asked to specify
 # the path during processing. Otherwise, the second input after the script
 # is meant to specify the BIDS_path. In a future release this will be 
 # changed for easier handling.
-BIDS_path = ''
 #BIDS_path = '/tmp/luesebrink/sensemap/'
+if args.BIDS_path:
+    BIDS_path = args.BIDS_path
+else:
+    BIDS_path = ''
 
 # Process with an additional high resolution MP2RAGE slab. If 'True' the 
 # first run must be the lower resolution whole brain MP2RAGE volume and
 # the second run must be the higher resolution MP2RAGE slab volume.
-hires = True
+if args.hires:
+    hires = args.hires
+else:
+    hires = False
 
 # Map specific volume onto the surface. This could be the BOLD of a task
 # fMRI time series (preferably the mean across the time series) or the
 # magnitude data of a QSM volume. This volume will be registered to the
 # T1map of the MP2RAGE volume.
-# Requires an absolute path to a NIfTI file. Results will be written to
+# Requries an absolute path to a NIfTI file. Results will be written to
 # <BIDS_path>/derivatives/sub-<label>/. If the path points to a 
 # non-existing file, the according option will be omitted.
-map_data = ''
+if args.map_data:
+    map_data = args.map_data
+else:
+    map_data = ''
 #map_data = BIDS_path + 'sub-aaa/anat/sub-aaa_part-mag_SWI.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-aaa/func/sub-aaa_task-rest_bold_mean.nii.gz'
 #map_data = BIDS_path + 'derivatives/sub-aaa/func/sub-aaa_task-pRF_bold_mean.nii.gz'
@@ -179,19 +202,22 @@ map_data = ''
 # Transform data in the same space as 'map_data' which is then mapped onto
 # the surface. Could for example be the statistical maps of SPM from fMRI or the
 # Chi map of QSM data.
-# Requires an absolute path to a NIfTI file or a directory containing compressed
+# Requries an absolute path to a NIfTI file or a directory containing compressed
 # NIfTI files. The transformation is then applied to all files within the
 # directory. Results will be written to <BIDS_path>/derivatives/sub-<label>/.
 # If the path points to a non-existing file or directory, the according
 # option will be omitted.
-transform_data = ''
+if args.transform_data:
+    transform_data = args.transform_data
+else:
+    transform_data = ''
 #transform_data = BIDS_path + 'derivatives/sub-aaa/QSM/sub-aaa_Chimap.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-aaa/resting_state/sub-aaa_task-rest_bold_ecm_rlc.nii.gz'
 #transform_data = BIDS_path + 'derivatives/sub-aaa/pRF_statisticalMaps/'
 #transform_data = BIDS_path + 'derivatives/sub-aaa/pRF_model/'
 
 # Choose interpolation method for mapping of additional data. Choice of
-# interpolator can be 'linear', 'nearestNeighbor, 'bSpline', 'genericLabel'.
+# interpolator can be 'linear', 'nearstNeighbor, 'bSpline', 'genericLabel'.
 # See https://antspy.readthedocs.io/en/latest/_modules/ants/registration/apply_transforms.html 
 # for full list of supported interpolators.
 interpolation_method = 'nearestNeighbor'
@@ -217,7 +243,7 @@ reprocess_rightHemisphere = False
 # In this scenario you would want to set this flag to true, change the path
 # of 'map_data' and 'transform_data' to your QSM data and the resulting
 # Chi map, respectively. All other reprocess flags should be set to 'False'
-# to avoid unnecessecary reprocessing.
+# to avoid unnessecary reprocessing.
 # The basename of the output will be based on the file name of the input
 # data. According to BIDS the subject label will be added as prefix to all
 # output data.
@@ -243,16 +269,10 @@ atlas = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas', 'brain
 # compute server)
 # -------------------
 if not sub:
-	if len(sys.argv) > 1:
-		sub = sys.argv[1]
-	else:
-		sub = input('Please enter subject ID: ')
+	sub = input('Please enter subject ID: ')
 	
 if not BIDS_path:
-	if len(sys.argv) > 2:
-		BIDS_path = sys.argv[2]
-	else:
-		BIDS_path = input('Please enter full path to BIDS directory: ')
+	BIDS_path = input('Please enter full path to BIDS directory: ')
 
 # Set paths and create directories
 in_dir = BIDS_path + 'sub-' + sub + '/anat/'
@@ -315,7 +335,7 @@ else:
 	print('		 ./BIDS_path/')
 	print(' 	 └── /sub-' + sub + '/')
 	print('		 	  └── anat')
-    	print('			      ├── sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
+	print('			      ├── sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_T1map.nii.gz')
 	print('			      ├── sub-' + sub + '_run-01_UNIT1.nii.gz')
@@ -394,7 +414,7 @@ elif os.path.isdir(transform_data) or os.path.isfile(transform_data):
 		if 'sub-' + sub in transform_data_output:
 			transform_data_output = transform_data_output[8:]
 
-# For naming and checking of processing files.
+# For nameing and checking of processing files.
 if hires == True:
 	merged = '_merged_run-01+02'
 	resampled = '_resampled'
@@ -568,7 +588,7 @@ if hires == True:
 # Changes of the script include initial moving transform (from origin to
 # contrast), number of iterations, precision of float instead double as
 # well as BSpline interpolation instead of linear interpolation for
-# sharper representation of the resulting volume.
+# sharper respresentation of the resulting volume.
 if hires == True:
 	print('')
 	print('*****************************************************')
@@ -686,7 +706,7 @@ if hires == True:
 		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 		output = os.path.join(out_dir, 'sub-' + sub + '_merged_run-01+02_T1map.nii.gz')
-		cmd = "weightedAverage(\'" + T1map + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
+		cmd = "weightedAverage(\'" + T1w + "\', \'" + T1w_slab_reg + "\', \'" + T1w_WM + "\', \'" + mask + "\', \'" + output + "\'); exit;"
 		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
 
 	# Update file names
@@ -793,7 +813,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_wm')
+	file_name='sub-' + sub + merged)
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -801,14 +821,14 @@ nighres.surface.levelset_to_probability(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_wm')
+	file_name='sub-' + sub + merged + '_segmentation_wm_binary')
 
 p2l = nighres.surface.probability_to_levelset(
 	os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_gm_binary.nii.gz'),
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_gm')
+	file_name='sub-' + sub + merged)
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -823,7 +843,7 @@ p2l = nighres.surface.probability_to_levelset(
 	save_data=True,
 	overwrite=reprocess,
 	output_dir=out_dir,
-	file_name='sub-' + sub + merged + '_segmentation_ee')
+	file_name='sub-' + sub + merged)
 
 nighres.surface.levelset_to_probability(
 	p2l['result'],
@@ -925,7 +945,7 @@ for hemi in ["left", "right"]:
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')
 
-	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz')) and reprocess != True:
+	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz')) and reprocess != True:
 		print('Files exists already. Skipping process.')
 		inside_mask = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_wm_binary_tpc-obj_cropped.nii.gz'))
 		inside_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_wm_l2p-proba_cropped.nii.gz'))
@@ -953,7 +973,7 @@ for hemi in ["left", "right"]:
 		del tmp_1
 		del tmp_2
 
-		# Apply cropping to binary white matter mask
+		# Apply cropping to binary white matter mak
 		img = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_segmentation_wm_binary.nii.gz'))
 		tmp = img.get_fdata()
 		inside_mask = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
@@ -1036,6 +1056,22 @@ for hemi in ["left", "right"]:
 		tmp[:,0:4,:] = 0
 		tmp[:,:,0:4] = 0
 		ants.image_write(tmp, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
+
+        # Apply cropping to T1w
+		img = nb.load(T1w_masked)
+		tmp = img.get_fdata()
+		T1map_masked = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
+		nb.save(T1map_masked, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
+
+		# Set voxels close to the image border to zero, otherwise nighres will fail.
+		tmp = ants.image_read(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
+		tmp[:-4:-1,:,:] = 0
+		tmp[:,:-4:-1,:] = 0
+		tmp[:,:,:-4:-1] = 0
+		tmp[0:4,:,:] = 0
+		tmp[:,0:4,:] = 0
+		tmp[:,:,0:4] = 0
+		ants.image_write(tmp, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
 		
 		# Update file names
 		inside_mask = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_wm_binary_tpc-obj_cropped.nii.gz'))
@@ -1043,6 +1079,7 @@ for hemi in ["left", "right"]:
 		region_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_gm_l2p-proba_cropped.nii.gz'))
 		background_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_ee_l2p-proba_cropped.nii.gz'))
 		T1map_masked_cropped = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
+		T1w_masked_cropped = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
 
 		del img
 		del tmp
@@ -1053,28 +1090,28 @@ for hemi in ["left", "right"]:
 	# --------------------------------
 	# Insert comment about the module here if it does what is expected of it.
 	
-	#print('')
-	#print('*****************************************************')
-	#print('* Vessel filter')
-	#print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
-	#print('*****************************************************')	
-	#vessel_filtered = nighres.filtering.multiscale_vessel_filter(
-	#	T1map_masked_cropped, # maybe?
-	#	structure_intensity='bright',
-	#	filterType='RRF',
-	#	propagationtype='diffusion',
-	#	threshold=0.5,
-	#	factor=0.5,
-	#	max_diff=0.001,
-	#	max_itr=100,
-	#	scale_step=1.0,
-	#	scales=4,
-	#	prior_image=None,
-	#	invert_prior=False,
-	#	save_data=True,
-	#	overwrite=reprocess,
-	#	output_dir=out_dir,
-	#	file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere')    
+	print('')
+	print('*****************************************************')
+	print('* Vessel filter')
+	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
+	print('*****************************************************')	
+	vessel_filtered = nighres.filtering.multiscale_vessel_filter(
+		T1w_masked_cropped,
+		structure_intensity='bright',
+		filterType='RRF',
+		propagationtype='diffusion',
+		threshold=0.5,
+		factor=0.5,
+		max_diff=0.001,
+		max_itr=100,
+		scale_step=1.0,
+		scales=4,
+		prior_image=None,
+		invert_prior=False,
+		save_data=True,
+		overwrite=reprocess,
+		output_dir=out_dir,
+		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere')    
 	
     #############################################################################
 	# 11. CRUISE cortical reconstruction
@@ -1092,7 +1129,7 @@ for hemi in ["left", "right"]:
 		wm_image=inside_proba,
 		gm_image=region_proba,
 		csf_image=background_proba,
-		vd_image=None, #should be vessel_filtered[probability] to make use of the output of the vessel filter
+		vd_image=vessel_filtered[probability],
 		data_weight=0.8,
 		regularization_weight=0.2,
 		max_iterations=5000,
@@ -1421,7 +1458,7 @@ for hemi in ["left", "right"]:
 			map_data = os.path.join(out_dir, reg1 + '.nii.gz')
 
 	############################################################################
-	# 13.2. Crop additional data to hemisphere
+	# 13.2. Crop additional data to hemispehre
 	# -------------------
 	if map_file_onto_surface:
 		print('')
@@ -1893,14 +1930,14 @@ else:
 #			WM_segmentation_slab = ants.morphology(WM_segmentation_slab, operation='dilate', radius=1, mtype='grayscale', shape='box')
 #			ants.image_write(WM_segmentation, os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w_WM_segmentation.nii.gz'))
 #
-#		# Calculate ratio between T1w whole brain white matter segmentation and high resolution slab data
+#		# Calulate ratio between T1w whole brain white matter segmentation and high resolution slab data
 #		ratio_T1w = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #		
-#		# Mask T1map to calculate ratio between quantitative T1 whole brain white matter segmentation and high resolution slab data
+#		# Mask T1map to calulate ratio between quantitateve T1 whole brain white matter segmentation and high resolution slab data
 #		WM_segmentation = ants.mask_image(T1map,WM_segmentation,binarize=False)
 #		WM_segmentation_slab = ants.mask_image(T1map_slab_reg,WM_segmentation_slab,binarize=False)
 #		
-#		# Calculate ratio between T1map whole brain white matter segmentation and high resolution slab data
+#		# Calulate ratio between T1map whole brain white matter segmentation and high resolution slab data
 #		ratio_T1map = WM_segmentation.mean() / WM_segmentation_slab.mean()
 #
 #		# Get dimensions of image for looping

@@ -151,9 +151,9 @@ from time import localtime, strftime
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--subject_id", help="Defines subject ID of BIDS structured data.")
 parser.add_argument("-p", "--BIDS_path", help="Defines path to BIDS structured data.")
-parser.add_argument("-r", "--hires", choices=['true', 'false'], help="Process with using an additional high resolution MP2RAGE slab (Boolean).")
 parser.add_argument("-m", "--map_data", help="Map specified volume onto the generated surface.")
 parser.add_argument("-t", "--transform_data", help="Transform data into the same space as map data and map it onto the surface afterwards. Can be folder with NIfTI files.")
+parser.add_argument("-r", "--hires", action=store_true, help="Process with using an additional high resolution MP2RAGE slab.")
 args = parser.parse_args()
 
 # Define subject to be processed according to BIDS nomenclature here. If
@@ -180,10 +180,10 @@ else:
 # first run must be the lower resolution whole brain MP2RAGE volume and
 # the second run must be the higher resolution MP2RAGE slab volume.
 if args.hires:
-    hires = args.hires
+    hires = True
 else:
     hires = False
-
+    
 # Map specific volume onto the surface. This could be the BOLD of a task
 # fMRI time series (preferably the mean across the time series) or the
 # magnitude data of a QSM volume. This volume will be registered to the
@@ -289,6 +289,7 @@ open(os.path.join(out_dir, 'is_running'), mode='a').close()
 
 # Define file names
 if hires == True:
+	print('Running high resolution pipeline.')
 	INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
 	INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
 	T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
@@ -299,6 +300,7 @@ if hires == True:
 	T1map_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_T1map.nii.gz')
 	UNI_slab = os.path.join(in_dir, 'sub-' + sub + '_run-02_UNIT1.nii.gz')
 else:
+	print('Running standard pipeline.')
 	INV1 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-1_MP2RAGE.nii.gz')
 	INV2 = os.path.join(in_dir, 'sub-' + sub + '_run-01_inv-2_MP2RAGE.nii.gz')
 	T1map = os.path.join(in_dir, 'sub-' + sub + '_run-01_T1map.nii.gz')
@@ -453,6 +455,7 @@ if hires == True:
 	if os.path.isfile(os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')) and reprocess != True:
 		print('File exists already. Skipping process.')
 	else:
+		reg = str(10)
 		output = os.path.join(out_dir, 'sub-' + sub + '_run-02_T1w.nii.gz')
 		cmd = "removeBackgroundnoise(\'" + UNI_slab + "\', \'" + INV1_slab + "', \'" + INV2_slab + "\', \'" + output + "\'," + reg + "); exit;"
 		subprocess.run(["matlab", "-nosplash", "-nodisplay", "-r", cmd])
@@ -952,6 +955,7 @@ for hemi in ["left", "right"]:
 		region_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_gm_l2p-proba_cropped.nii.gz'))
 		background_proba = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_segmentation_ee_l2p-proba_cropped.nii.gz'))
 		T1map_masked_cropped = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
+		T1w_masked_cropped = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
 	else:
 		# Load grey matter image, binarize image, and get information for cropping
 		img = nb.load(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_xmask-' + crop_mask + '.nii.gz'))
@@ -1044,8 +1048,8 @@ for hemi in ["left", "right"]:
 		# Apply cropping to T1map
 		img = nb.load(T1map_masked)
 		tmp = img.get_fdata()
-		T1map_masked = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
-		nb.save(T1map_masked, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
+		T1map_masked_tmp = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
+		nb.save(T1map_masked_tmp, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
 
 		# Set voxels close to the image border to zero, otherwise nighres will fail.
 		tmp = ants.image_read(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1map_cropped.nii.gz'))
@@ -1060,8 +1064,8 @@ for hemi in ["left", "right"]:
         # Apply cropping to T1w
 		img = nb.load(T1w_masked)
 		tmp = img.get_fdata()
-		T1map_masked = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
-		nb.save(T1map_masked, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
+		T1map_masked_tmp = nb.Nifti1Image(tmp[coord], affine=img.affine, header=img.header)
+		nb.save(T1map_masked_tmp, os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
 
 		# Set voxels close to the image border to zero, otherwise nighres will fail.
 		tmp = ants.image_read(os.path.join(out_dir, 'sub-' + sub + merged + '_' + hemi + 'Hemisphere_T1w_cropped.nii.gz'))
@@ -1095,29 +1099,29 @@ for hemi in ["left", "right"]:
 	print('* Vessel filter')
 	print('* Started at: ' + strftime("%Y-%m-%d %H:%M:%S", localtime()))
 	print('*****************************************************')	
-	vessel_filtered = nighres.filtering.multiscale_vessel_filter(
-		T1w_masked_cropped,
-		structure_intensity='bright',
-		filterType='RRF',
-		propagationtype='diffusion',
-		threshold=0.5,
-		factor=0.5,
-		max_diff=0.001,
-		max_itr=100,
-		scale_step=1.0,
-		scales=4,
-		prior_image=None,
-		invert_prior=False,
-		save_data=True,
-		overwrite=reprocess,
-		output_dir=out_dir,
-		file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere')    
-	
+	#vessel_filtered = nighres.filtering.multiscale_vessel_filter(
+	#	T1w_masked_cropped,
+	#	structure_intensity='bright',
+	#	filterType='RRF',
+	#	propagationtype='diffusion',
+	#	threshold=0.75,
+	#	factor=0.5,
+	#	max_diff=0.0001,
+	#	max_itr=1000,
+	#	scale_step=1.0,
+	#	scales=4,
+	#	prior_image=None,
+	#	invert_prior=False,
+	#	save_data=True,
+	#	overwrite=reprocess,
+	#	output_dir=out_dir,
+	#	file_name='sub-' + sub + merged + '_' + hemi + 'Hemisphere')    
+
     #############################################################################
 	# 11. CRUISE cortical reconstruction
 	# --------------------------------
 	# the WM inside mask as a (topologically spherical) starting point to grow a
-	# refined GM/WM boundary and CSF/GM boundary
+	# refined GM/WM boundary and CSF/GM boundary	
 	print('')
 	print('*****************************************************')
 	print('* Cortical reconstruction with CRUISE')
@@ -1129,7 +1133,7 @@ for hemi in ["left", "right"]:
 		wm_image=inside_proba,
 		gm_image=region_proba,
 		csf_image=background_proba,
-		vd_image=vessel_filtered[probability],
+		vd_image=None, #vessel_filtered['probability'],
 		data_weight=0.8,
 		regularization_weight=0.2,
 		max_iterations=5000,

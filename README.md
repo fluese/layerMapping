@@ -36,32 +36,34 @@ Things needed to be installed:
 This script requires whole brain MP2RAGE data organized according to BIDS. The script expects the first and second inversion, the T1 weighted data as
 well as the T1 map. You can make use of a high resolution MP2RAGE slab additionally. The slab will be merged into the whole brain volume automatically and used for further processing. To make use of a high resolution slab, the slab needs to be acquired as the second run in a session (or at least named as if it were acquired in the same session).
 
-In the subsection "set parameters" of the setup section, you need to specify the folder to the BIDS directory and the label of the subject you want to process. This can be done in multiple ways. First, specify the path and file in the script directly. Secondly, when the script is called the next two inputs are for the subject ID and path to the BIDS directory, respectively. Lastly, if all is left empty, the user will be asked to specify a subject ID and the full path to the BIDS directory at the beginning of the script.
+You can either use flags to process data or add it in "set parameters" of the setup section, you need to specify the folder to the BIDS directory and the label of the subject you want to process. This can be done in multiple ways. First, specify the path and file in the script directly. Secondly, adding flags when the script is called with -s for subject ID and -p path to the BIDS directory, respectively. Lastly, if all is left empty, the user will be asked to specify a subject ID and the full path to the BIDS directory at the beginning of the script.
 
 Example use (Case 1):
-python3 layerMapping.py aaa /path/to/BIDS/data/
+python3 layerMapping.py -s aaa -p /path/to/BIDS/data/
 
 Example use (Case 2):
-python3 layerMapping.py aaa
+python3 layerMapping.py -s aaa
 
 Example use (Case 3):
 python3 layerMapping.py
 
 In case 1 the subject with the ID 'aaa' will be processed. The according data is expected in '/path/to/BIDS/data/'. Output will be generated in  '/path/to/BIDS/data/derivatives/sub-aaa/'. In case 2, either the path to the data needs to be defined in the script itself in the variable 'BIDS_path' or if left empty the user is asked to specify the path to the data. In case 3, the same for the path is true for the subject ID. It can either be specified in the script itself in the 'sub' variable or if left empty, the user will be asked for an ID during processing.
 
-Furthermore, you can specify a single volume which will be mapped on the surface additionally. This is meant for mapping another contrast  on the  surface, e.g. QSM data or fMRI results. The resulting transformation can be applied either to another volume or to all compressed NIfTI files of an entire directory. Currently, this can be done in the script only.
+Furthermore, you can specify a single volume which will be mapped on the surface additionally. This is meant for mapping another contrast on the  surface, e.g. QSM data or fMRI results. The resulting transformation can be applied either to another volume or to all compressed NIfTI files of an entire directory. You have to use the -m flag to specify the data that shall be mapped. Using the -t flag you can specify data in the same space as 'map data' that will be transformed along 'map data'.
 
 To enable logging of the output, one can send the screen output into a file. This can be done, e.g. by using following command:
 
-python3 -u layerMapping.py aaa |& tee -a /tmp/luesebrink/sensemap/derivatives/sub-aaa/layerMapping.log
+python3 -u layerMapping.py -s aaa |& tee -a /tmp/luesebrink/sensemap/derivatives/sub-aaa/layerMapping.log
 
 A few flags have been set up which allow to reprocess data at various stages of the pipeline (e.g. entirely, from the segmentation onwards, mapping of additional data, or per hemisphere). In case you want to map multiple files onto the surface additionally, this is especially useful as you don't have to process all other data again. Simply specify a file under 'map_data' that shall be mapped onto the surface and change the 'reprocess_map_data' flag to True.
+
+To make use of the high resoltion pipeline, in which a high resolution slab is merged into a low resolution whole brain dataset. Use the -r flag.
 
 ## Sample data:
 Sample data can be made avaiable upon request.
 
 ## Version
-1.1 (23.02.2023)
+1.2 (08.06.2023)
 
 ## Contact information
 Dr. Falk Luesebrink
